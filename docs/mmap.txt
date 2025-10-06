@@ -3,4 +3,5 @@ Scheel'Nix Memory MAP:
 0x7E00   - 0x8EFF: stage2.bin / bios_memory_map
 
          - 90000h: kernel_stack
-0x100000 -       : kernel.bin
+0x100000 - 100FFFh: kentry.bin
+0x101000 -        : kernel.bin 

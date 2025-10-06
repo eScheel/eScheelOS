@@ -19,8 +19,8 @@ jmp short ENTRY
 
 kernel_addr_tmp equ 0xA000
 kernel_addr equ 0x100000
-kernel_size equ 4096
-kernel_sect equ 10          ; Sector Offset.
+kernel_size equ 8192
+kernel_sect equ 10               ; Sector Offset.
 
 video_mode: db 0    ; Default video mode passed to kernel via al register.
 boot_drive: db 0    ; Boot drive passed to kernel via dl register.
