@@ -10,7 +10,7 @@
 ;       3) Load kernel.bin code at address A000h and relocate to 100000h. (Not using EDD)
 ;       4) Bootstrap and then jump to kernel.bin
 ;
-;   TODO: Write a file system driver to load the kernel from a data region as opposed to flat sectors. Also implement LBA as well.
+;   TODO: Write a file system driver to load the kernel from a data region as opposed to flat sectors.
 ;
 [org 0x7e00]
 [bits 16]
@@ -20,7 +20,7 @@ jmp short ENTRY
 kernel_addr_tmp equ 0xA000
 kernel_addr equ 0x100000
 kernel_size equ 8192
-kernel_sect equ 10               ; Sector Offset.
+kernel_sect equ 9               ; Sector Offset.
 
 video_mode: db 0    ; Default video mode passed to kernel via al register.
 boot_drive: db 0    ; Boot drive passed to kernel via dl register.
@@ -48,20 +48,16 @@ ENTRY:
     call BIOS_MEMORY_MAP      ; Retrieve memory map from BIOS.
     jc   MEMORY_MAP_FAILED    ; If carry is set, the function failed.
 .LOAD_KERNEL:
-    ; TODO: For now we will just be lazy and assume the kernel can be loaded at 0xA000 and 0x100000. Seems to be safe in most cases..
-    ; The reason for two address is standard BIOS routines are unable to load above 1MB I guess. So load low(A000h), copy high(100000h).
-    ; Eventually we will add logic to check memory map and place at actually available location. Maybe, since in most cases ...
-    xor bx, bx         
-    mov es, bx              ; Indirectly set ES for ES:BX.
-    mov bx, kernel_addr_tmp ; Set BX to start of kernel for ES:BX.
-    mov al, kernel_size/512 ; Number of sectors to read.
-    mov cl, kernel_sect     ; Sector index to read.
-    mov ch, 0               ; Cylinder index to read.
-    mov dh, 0               ; Head index to read.
-    mov dl, [boot_drive]
-    mov ah, 0x02            ; BIOS Read Sectors function.
-    int 0x13                ; Call BIOS disk interrupt.
-    jc  KERNEL_LOAD_FAILED
+    xor  bx, bx         
+    mov  es, bx              ; Indirectly set ES for ES:BX.
+    mov  bx, kernel_addr_tmp ; Set BX to start of kernel for ES:BX.
+    mov  al, kernel_size/512 ; Number of sectors to read.
+    mov  ax, kernel_sect
+    call LBA_TO_CHS          ; This will return proper setup in cx - dh.
+    mov  dl, [boot_drive]
+    mov  ah, 0x02            ; BIOS Read Sectors function.
+    int  0x13                ; Call BIOS disk interrupt.
+    jc   KERNEL_LOAD_FAILED
 .RELOCATE_KERNEL:
     xor si, si              ; Set up source segment:offset.
     mov gs, si
@@ -85,6 +81,40 @@ ENTRY:
     or  eax, 1          ; We only need to change the bottom bit.
     mov cr0, eax
     jmp CODE_SEG:BOOTSTRAP32
+
+;=============================================================================================
+
+;
+;   Complements of nanobyte. Thanks!
+;   https://github.com/nanobyte-dev/nanobyte_os/blob/master/src/bootloader/stage1/boot.asm
+;
+;   Converts LBA to CHS.
+;   Store LBA Address in AX when calling. 
+;   Returns CX bits 0-5 sector , CX bits 6-15 cylinder , DH = head.
+;
+; For now we will just assume a disk size of 2 heads and 63 Sectors per track.
+lba_to_chs_heads: db 2
+lba_to_chs_spt:   db 63     ; Sectors per track.
+;
+LBA_TO_CHS:
+    push ax
+    push dx
+    xor dx, dx			                 ; Set DX to zero before dividing
+    div word[lba_to_chs_spt]             ; AX = LBA / SectorsPerTrack
+  	; DX = LBA % SectorsPerTrack
+    inc dx			                     ; DX = (LBA % SectorsPerTrack + 1) = Sector			
+    mov cx, dx			                 ; Move our sector into CX
+    xor dx, dx
+    div word[lba_to_chs_heads]		     ; AX = (LBA / SectorsPerTrack) / Heads = cylinder
+  	; DX = (LBA / SectorsPerTrack) % Heads = head
+    mov dh, dl			                 ; Move our head into DH.
+    mov ch, al			                 ; 
+    shl ah, 6
+    or  cl, ah
+    pop ax
+    mov dl, al
+    pop ax
+    ret
 
 ;=============================================================================================
 
@@ -225,8 +255,10 @@ GDT_ENTRY:
         db 0xcf     ; Limit flags
         db 0x00     ; Base (bits 23-31)
 GDT_END:
+
 CODE_SEG: equ GDT_CODE-GDT_ENTRY
 DATA_SEG: equ GDT_DATA-GDT_ENTRY
+
 GDT_DESC:
     dw GDT_END-GDT_ENTRY-1  ; Size of GDT is always (size-1)
     dd GDT_ENTRY            ; Start address of the gdt.
@@ -241,6 +273,7 @@ BOOTSTRAP32:
     mov es, ax
     mov gs, ax
     mov fs, ax
+    mov ss, ax
 
     ; Pass boot drive and default video mode to kernel.
     mov dl, [boot_drive]      ; Pass boot drive to kernel.

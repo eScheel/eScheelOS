@@ -14,6 +14,8 @@ _START:
     call TTY_PRINTS
     call TTY_PRINTNL
 
+
+
     jmp  $
 
 %include 'kernel/tty.inc'
@@ -28,4 +30,3 @@ mmap_desc_addr: dw 0
 ;magic: db 0x5A,0x55,0x48,0x55,0x49,0x44,0x41,0x49,0   ;'ZUHUIDAI'
 magic: db "eScheelOS",0
 ;magic: db "This is a test string ...",0
-
