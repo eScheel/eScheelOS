@@ -10,7 +10,7 @@
 ;       3) Load kernel.bin code at address A000h and relocate to 100000h. (Not using EDD)
 ;       4) Bootstrap and then jump to kernel.bin
 ;
-;   TODO: Write a file system driver to load the kernel from a data region as opposed to flat sectors.
+;   TODO: Write a file system driver to load a kernel from a data region as opposed to flat sectors and binary.
 ;
 [org 0x7e00]
 [bits 16]
@@ -25,8 +25,8 @@ kernel_sect equ 9               ; Sector Offset.
 video_mode: db 0    ; Default video mode passed to kernel via al register.
 boot_drive: db 0    ; Boot drive passed to kernel via dl register.
 
-msg_mmap_fail:   db 'e','3'
-msg_kernel_fail: db 'e','4'
+msg_mmap_fail:   db 'error: Failed to get valid memory map form BIOS.',0
+msg_kernel_fail: db 'error: Failed to load the kernel.',0
 
 ;=============================================================================================
 
@@ -93,6 +93,7 @@ ENTRY:
 ;   Returns CX bits 0-5 sector , CX bits 6-15 cylinder , DH = head.
 ;
 ; For now we will just assume a disk size of 2 heads and 63 Sectors per track.
+;
 lba_to_chs_heads: db 2
 lba_to_chs_spt:   db 63     ; Sectors per track.
 ;
@@ -119,17 +120,13 @@ LBA_TO_CHS:
 ;=============================================================================================
 
 MEMORY_MAP_FAILED:
-    mov  al, byte [msg_mmap_fail]
-    call BIOS_PRINTC
-    mov  al, byte [msg_mmap_fail+1]
-    call BIOS_PRINTC
+    lea  si, [msg_mmap_fail]
+    call BIOS_PRINTS
     jmp  HALT
 
 KERNEL_LOAD_FAILED:
-    mov  al, byte [msg_kernel_fail]
-    call BIOS_PRINTC
-    mov  al, byte [msg_kernel_fail+1]
-    call BIOS_PRINTC
+    lea  si, [msg_kernel_fail]
+    call BIOS_PRINTS
 
 HALT:
     cli         ; Disable Interrupts.
@@ -141,20 +138,33 @@ HALT:
 ;   Caller must put character in al register.
 ;
 BIOS_PRINTC:
-    push ax
-    push bx
+    pusha
     mov  ah, 0x0e       ; AH = 0x0e (BIOS function "VIDEO - TELETYPE OUTPUT")
     xor  bx, bx         ; BH = page number , BL = color.
     int  0x10
-    pop  bx
-    pop  ax
+    popa
+    ret
+
+;   Prints a string of characters to the screen.
+;   Caller must put string in si register.
+;
+BIOS_PRINTS:
+    pusha
+.LOOP:
+    lodsb                   ; Loads a byte from ds:si into al.
+    or   al, al             ; Test for null character or if al is zero.
+    jz   BIOS_PRINTS_DONE
+    call BIOS_PRINTC        ; Print it out.
+    jmp .LOOP               ; Do it again.
+BIOS_PRINTS_DONE:
+    popa
     ret
 
 ;   Sets the video mode. Also can be used to clear the screen?
 ;   Caller must put desired mode in dl register.
 ;
 BIOS_VIDEO_MODE:
-    push ax
+    pusha
     mov  ah, 0x0f                ; AH = 0x0F (BIOS function “Get Video Mode”)
     int  0x10  
     mov [video_mode], al
@@ -165,7 +175,7 @@ BIOS_VIDEO_MODE:
     int  0x10                    ; Call BIOS video interrupt.
     ; TODO: Account for error maybe.
 .SKIPSETVID:
-    pop ax
+    popa
     ret
 
 ;   Retrieves the system memory map using INT 0x15, EAX=0xE820.
