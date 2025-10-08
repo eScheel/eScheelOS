@@ -1,7 +1,7 @@
 [org 0x100000]
 [bits 32]
 
-_START:
+ENTRY:
     mov ebp, 0x90000
     mov esp, ebp
 
