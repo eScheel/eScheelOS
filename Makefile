@@ -1,4 +1,6 @@
-.PHONY: boot kernel
+.PHONY: all boot kernel
+
+all: boot clean-boot kernel clean-kernel
 
 boot:
 	nasm boot/boot.asm -f bin -o boot.bin
