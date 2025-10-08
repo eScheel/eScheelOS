@@ -50,10 +50,10 @@ ENTRY:
 .LOAD_KERNEL:
     xor  bx, bx         
     mov  es, bx              ; Indirectly set ES for ES:BX.
-    mov  bx, kernel_addr_tmp ; Set BX to start of kernel for ES:BX.
-    mov  al, kernel_size/512 ; Number of sectors to read.
     mov  ax, kernel_sect
     call LBA_TO_CHS          ; This will return proper setup in cx - dh.
+    mov  bx, kernel_addr_tmp ; Set BX to start of kernel for ES:BX.
+    mov  al, kernel_size/512 ; Number of sectors to read.
     mov  dl, [boot_drive]
     mov  ah, 0x02            ; BIOS Read Sectors function.
     int  0x13                ; Call BIOS disk interrupt.
@@ -93,6 +93,7 @@ ENTRY:
 ;   Returns CX bits 0-5 sector , CX bits 6-15 cylinder , DH = head.
 ;
 ; For now we will just assume a disk size of 2 heads and 63 Sectors per track.
+; Eventually, I believe we are supposed to get these values from file system headers or something?
 ;
 lba_to_chs_heads: db 2
 lba_to_chs_spt:   db 63     ; Sectors per track.
