@@ -20,8 +20,8 @@ stage2_sect equ 2           ; Sector Offset.
 
 boot_drive: db  0
 
-msg_disk_reset_failed: db 'e','1'       ; (e1) Error code for resetting the boot drive.
-msg_stage2_failed:     db 'e','2'       ; (e2) Error code for BIOS unable to load stage2.
+msg_disk_reset_failed: db 'error: Failed resetting the boot drive.'
+msg_stage2_failed:     db 'error: Failed loading stage2.'
 
 ;=============================================================================================
 
@@ -32,7 +32,7 @@ ENTRY:
     mov ds, ax                  ; Initialize data segment register.
     mov es, ax                  ; Initialize extra data segment register.
     mov ss, ax                  ; Initialize stack segment register.
-    mov ax, 0x7c00              ; NotebookLLM says I need to set this just below and grow down, while some say a little further below.
+    mov ax, 0x7c00              ;
     mov sp, ax                  ; sp = 0x7c00 just below boot code.
     sti                         ; Enable Interrupts.
     mov [boot_drive], dl        ; BIOS Stores boot drive number in dl. Save it.
@@ -118,6 +118,9 @@ KB_CONTROLLER_WAIT:
 
 ;=============================================================================================
 
+;   Prints a character to the screen.
+;   Caller must put character in al register.
+;
 BIOS_PRINTC:
     push bx
     mov  ah, 0x0e       ; AH = 0x0e (BIOS function "VIDEO - TELETYPE OUTPUT")
@@ -126,20 +129,31 @@ BIOS_PRINTC:
     pop  bx
     ret
 
+;   Prints a string of characters to the screen.
+;   Caller must put string in si register.
+;
+BIOS_PRINTS:
+    pusha
+.LOOP:
+    lodsb                   ; Loads a byte from ds:si into al.
+    or   al, al             ; Test for null character or if al is zero.
+    jz   BIOS_PRINTS_DONE
+    call BIOS_PRINTC        ; Print it out.
+    jmp .LOOP               ; Do it again.
+BIOS_PRINTS_DONE:
+    popa
+    ret
+
 ;=============================================================================================
 
 DISK_RESET_FAILED:
-    mov  al, byte [msg_disk_reset_failed]
-    call BIOS_PRINTC
-    mov  al, byte [msg_disk_reset_failed+1]
-    call BIOS_PRINTC
-    jmp ERROR
+    lea  si, [msg_disk_reset_failed]
+    call BIOS_PRINTS
+    jmp  ERROR
 
 STAGE2_FAILED:
-    mov  al, byte [msg_stage2_failed]
-    call BIOS_PRINTC
-    mov  al, byte [msg_stage2_failed+1]
-    call BIOS_PRINTC
+    lea  si, [msg_stage2_failed]
+    call BIOS_PRINTS
 
 ERROR:
     cli     ; Disable Interrupts.
