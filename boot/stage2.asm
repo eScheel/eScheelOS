@@ -47,33 +47,8 @@ ENTRY:
     call BIOS_VIDEO_MODE      ; Set video mode.
     call BIOS_MEMORY_MAP      ; Retrieve memory map from BIOS.
     jc   MEMORY_MAP_FAILED    ; If carry is set, the function failed.
-.LOAD_KERNEL:
-    xor  bx, bx         
-    mov  es, bx              ; Indirectly set ES for ES:BX.
-    mov  ax, kernel_sect
-    call LBA_TO_CHS          ; This will return proper setup in cx - dh.
-    mov  bx, kernel_addr_tmp ; Set BX to start of kernel for ES:BX.
-    mov  al, kernel_size/512 ; Number of sectors to read.
-    mov  dl, [boot_drive]
-    mov  ah, 0x02            ; BIOS Read Sectors function.
-    int  0x13                ; Call BIOS disk interrupt.
-    jc   KERNEL_LOAD_FAILED
-.RELOCATE_KERNEL:
-    xor si, si              ; Set up source segment:offset.
-    mov gs, si
-    mov si, kernel_addr_tmp ; A000h
-    mov di, 0xf800          ; Set up destination segment:offset.
-    mov fs, di
-    mov di, 0x8000          ; We are putting our kernel at 0x100000
-    xor cx, cx
-.LOOP:
-    mov al, byte [gs:si]
-    mov byte [fs:di], al    ; Move whats at 0xA000 into 0x100000
-    inc di
-    inc si                  ; Change this to use the rep instruction.
-    inc cx
-    cmp cx, kernel_size
-    jl .LOOP
+    call LOAD_KERNEL
+    call RELOCATE_KERNEL
 .BOOTSTRAP:
     cli
     lgdt[GDT_DESC]      ; Load the GDTR register with the base address of the GDT.
@@ -116,6 +91,41 @@ LBA_TO_CHS:
     pop ax
     mov dl, al
     pop ax
+    ret
+
+;=============================================================================================
+
+LOAD_KERNEL:
+    xor  bx, bx         
+    mov  es, bx              ; Indirectly set ES for ES:BX.
+    mov  ax, kernel_sect
+    call LBA_TO_CHS          ; This will return proper setup in cx - dh.
+    mov  bx, kernel_addr_tmp ; Set BX to start of kernel for ES:BX.
+    mov  al, kernel_size/512 ; Number of sectors to read.
+    mov  dl, [boot_drive]
+    mov  ah, 0x02            ; BIOS Read Sectors function.
+    int  0x13                ; Call BIOS disk interrupt.
+    jc   KERNEL_LOAD_FAILED
+    ret
+
+;=============================================================================================
+
+RELOCATE_KERNEL:
+    xor si, si              ; Set up source segment:offset.
+    mov gs, si
+    mov si, kernel_addr_tmp ; A000h
+    mov di, 0xf800          ; Set up destination segment:offset.
+    mov fs, di
+    mov di, 0x8000          ; We are putting our kernel at 0x100000
+    xor cx, cx
+.LOOP:
+    mov al, byte [gs:si]
+    mov byte [fs:di], al    ; Move whats at 0xA000 into 0x100000
+    inc di
+    inc si                  ; Change this to use the rep instruction.
+    inc cx
+    cmp cx, kernel_size
+    jl .LOOP
     ret
 
 ;=============================================================================================
