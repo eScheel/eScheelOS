@@ -183,3 +183,51 @@ BIOS_DISK_RESET:
     int  0x13
     popa
     ret
+
+
+
+
+
+
+
+
+
+
+    mov al, byte [fs:di]
+    call BIOS_PRINTC    
+    inc di
+    mov al, byte [fs:di]
+    call BIOS_PRINTC 
+    inc di
+    mov al, byte [fs:di]
+    call BIOS_PRINTC
+    call BIOS_PRINTNL
+
+
+
+
+
+
+
+
+
+
+
+
+RELOCATE_KERNEL:
+    xor si, si              ; Set up source segment:offset.
+    mov gs, si
+    mov si, kernel_addr_tmp ; A000h
+    mov di, 0xf800          ; Set up destination segment:offset.
+    mov fs, di
+    mov di, 0x8000          ; We are putting our kernel at 0x100000
+    xor cx, cx
+.LOOP:
+    mov al, byte [gs:si]
+    mov byte [fs:di], al    ; Move whats at 0xA000 into 0x100000
+    inc di
+    inc si                  ; Change this to use the rep instruction.
+    inc cx
+    cmp cx, kernel_size
+    jl .LOOP
+    ret

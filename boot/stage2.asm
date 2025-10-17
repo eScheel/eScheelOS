@@ -7,20 +7,21 @@
 ;   Purpose: This file will do the following:
 ;       1) Store the boot drive number passed by boot.bin
 ;       2) Initialize video mode and memory map from BIOS.
-;       3) Load kernel.bin code at address A000h and relocate to 100000h. (Not using EDD)
-;       4) Bootstrap and then jump to kernel.bin
+;       3) Load kernel code at address A000h and relocate to 100000h. (Not using EDD)
+;       4) Bootstrap and then jump to kernel.elf
 ;
-;   TODO: Write a file system driver to load a kernel from a data region as opposed to flat sectors and binary.
+;   TODO: Write a file system driver to load a kernel from a data region as opposed to flat sectors.
 ;
 [org 0x7e00]
 [bits 16]
 
 jmp short ENTRY
 
-kernel_addr_tmp equ 0xA000
-kernel_addr equ 0x100000
-kernel_size equ 8192
-kernel_sect equ 9               ; Sector Offset.
+kernel_addr_tmp equ 0xA000      ; Temporary address since we are not using BIOS extended functions.
+kernel_addr equ 0x100000        ; Address that elf_hdr + kernel_code/data will be loaded.
+kernel_size equ 24576
+kernel_lba  equ 9               ; LBA for kernel.elf on disk.
+kernel_text_offset: dd 0        ; The address we will eventually need to jump to start the kernel.
 
 video_mode: db 0    ; Default video mode passed to kernel via al register.
 boot_drive: db 0    ; Boot drive passed to kernel via dl register.
@@ -48,7 +49,7 @@ ENTRY:
     call BIOS_MEMORY_MAP      ; Retrieve memory map from BIOS.
     jc   MEMORY_MAP_FAILED    ; If carry is set, the function failed.
     call LOAD_KERNEL
-    call RELOCATE_KERNEL
+    call PARSE_ELF_AND_RELOCATE
 .BOOTSTRAP:
     cli
     lgdt[GDT_DESC]      ; Load the GDTR register with the base address of the GDT.
@@ -98,7 +99,7 @@ LBA_TO_CHS:
 LOAD_KERNEL:
     xor  bx, bx         
     mov  es, bx              ; Indirectly set ES for ES:BX.
-    mov  ax, kernel_sect
+    mov  ax, kernel_lba
     call LBA_TO_CHS          ; This will return proper setup in cx - dh.
     mov  bx, kernel_addr_tmp ; Set BX to start of kernel for ES:BX.
     mov  al, kernel_size/512 ; Number of sectors to read.
@@ -110,23 +111,58 @@ LOAD_KERNEL:
 
 ;=============================================================================================
 
-RELOCATE_KERNEL:
-    xor si, si              ; Set up source segment:offset.
+;
+;   kernel.elf
+;
+;   Section Headers:
+;         [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
+;         [ 1] .text             PROGBITS        00100000 001000 00003f 00  AX  0   0 4096
+;         [ 2] .data             PROGBITS        00101000 002000 00000e 00  WA  0   0 4096
+;         [ 3] .bss              NOBITS          00102000 00200e 002000 00  WA  0   0 4096
+;
+;   Program Headers:
+;       Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+;       LOAD           0x001000 0x00100000 0x00100000 0x0003f 0x0003f R E 0x1000
+;       LOAD           0x002000 0x00101000 0x00101000 0x0000e 0x03000 RW  0x1000
+;
+;   Eventually we should maybe change this to actually parse the header in the boot loader rather than using i686-elf-readelf.
+;   But I'm not sure we need to do that since we know our kernel and this is our bootloader.
+;
+PARSE_ELF_AND_RELOCATE:
+    xor si, si              ; Set up destination segment:offset.
     mov gs, si
-    mov si, kernel_addr_tmp ; A000h
+    mov si, kernel_addr_tmp ; A000h is where the LOAD_KERNEL routine loaded the kernel.
+    add si, 0x1000          ; We know that our section .text starts at. + 0x1000
+
     mov di, 0xf800          ; Set up destination segment:offset.
     mov fs, di
     mov di, 0x8000          ; We are putting our kernel at 0x100000
+
     xor cx, cx
-.LOOP:
+.LOOP1:
     mov al, byte [gs:si]
-    mov byte [fs:di], al    ; Move whats at 0xA000 into 0x100000
+    mov byte [fs:di], al    ; Move whats at section .text into 0x100000
     inc di
     inc si                  ; Change this to use the rep instruction.
     inc cx
-    cmp cx, kernel_size
-    jl .LOOP
+    cmp cx, 0x1000          ; Let's just load 4k here even though it might be less.
+    jl .LOOP1
+
+    mov si, 0xC000          ; This should be where our section .data starts. That BIOS loaded into memory.
+    mov di, 0x9000          ; This should be where we load it into memory. 0x101000
+
+    xor cx, cx
+.LOOP2:
+    mov al, byte [gs:si]
+    mov byte [fs:di], al    ; Move whats at section .text into 0x100000
+    inc di
+    inc si                  ; Change this to use the rep instruction.
+    inc cx
+    cmp cx, 0x3000          ; Let's just load 12k here for .data and .bss which follows right behind.
+    jl .LOOP2       
+
     ret
+
 
 ;=============================================================================================
 
@@ -169,6 +205,18 @@ BIOS_PRINTS:
     jmp .LOOP               ; Do it again.
 BIOS_PRINTS_DONE:
     popa
+    ret
+
+;
+;
+;
+BIOS_PRINTNL:
+    push ax
+    mov  al, 0xa
+    call BIOS_PRINTC
+    mov  al, 0xd
+    call BIOS_PRINTC
+    pop  ax
     ret
 
 ;   Sets the video mode. Also can be used to clear the screen?
@@ -299,7 +347,7 @@ BOOTSTRAP32:
     ; Pass boot drive and default video mode to kernel.
     mov dl, [boot_drive]      ; Pass boot drive to kernel.
     mov al, [video_mode]      ; Pass default video mode to kernel.
-    mov bx,  MMAP_DESC       ; Pass memory map buffer address to kernel.
+    mov bx,  MMAP_DESC        ; Pass memory map buffer address to kernel.
     
     ; ...
     jmp CODE_SEG:kernel_addr   ; CS:100000h
