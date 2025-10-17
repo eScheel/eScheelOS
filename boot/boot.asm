@@ -6,8 +6,7 @@
 ;
 ;   Purpose: This file will do the following:
 ;       1) Force set CS to zero and store boot drive number passed by BIOS.
-;       2) Check and enable A20 using two of three methods. ; TODO: Eventually verify that A20 is actually enabled.
-;       3) Load and execute the stage2.bin code at address 7E00h.
+;       2) Load and execute the stage2.bin code at address 7E00h.
 ;
 [org 0x7c00]
 [bits 16]
@@ -20,7 +19,7 @@ stage2_sect equ 2           ; Sector Offset.
 
 boot_drive: db  0
 
-msg_disk_reset_failed: db 'error: Failed resetting the boot drive.'
+msg_disk_reset_failed: db 'error: Failed resetting drive.'
 msg_stage2_failed:     db 'error: Failed loading stage2.'
 
 ;=============================================================================================
@@ -36,53 +35,16 @@ ENTRY:
     mov sp, ax                  ; sp = 0x7c00 just below boot code.
     sti                         ; Enable Interrupts.
     mov [boot_drive], dl        ; BIOS Stores boot drive number in dl. Save it.
-    mov ax, 0x2402              ; Get A20 gate status.
-    int 0x15
-    jc .A20_ENABLE_FALLBACK     ; If this fails, jump to the keyboard method!
-    cmp al, 0x1                 ; Is it already enabled?
-    je .A20_ENABLED             ; Yes, we're done.
-    mov ax, 0x2401              ; Try to enable it.
-    int 0x15
-    jc .A20_ENABLE_FALLBACK     ; If this fails, jump to the keyboard method!
-    mov ax, 0x2402              ; Verify it worked.
-    int 0x15
-    jc .A20_ENABLE_FALLBACK     ; If verification fails, try the other way
-    cmp al, 0x1
-    je .A20_ENABLED             ; Success!
-.A20_ENABLE_FALLBACK:
-    cli
-    call KB_CONTROLLER_WAIT         ; Wait until controller is ready
-    mov  al, 0xad                   ; Command to disable the keyboard
-    out  0x64, al
-    call KB_CONTROLLER_WAIT
-    mov  al, 0xd0                   ; Command to read the output port.
-    out  0x64, al
-    call KB_WAIT
-    in   al, 0x60                   ; Read the output port value
-    push ax                         ; Save it
-    call KB_CONTROLLER_WAIT
-    mov  al, 0xd1                   ; Command to write to the output port
-    out  0x64, al
-    call KB_CONTROLLER_WAIT
-    pop  ax                         ; Get the original value back
-    or   al, 2                      ; Set bit 1 (the A20 gate enable bit)
-    out  0x60, al                   ; Write the new value back
-    call KB_CONTROLLER_WAIT
-    mov  al, 0xae                   ; Command to enable the keyboard
-    out  0x64, al
-    call KB_CONTROLLER_WAIT
-    sti
-.A20_ENABLED:
-    xor cx, cx               ; Initialze counter for retry logic with disk reset.
+    xor cx, cx                  ; Initialze counter for retry logic with disk reset.
 .LOOP:
-    mov  ah, 0x00	         ; Disk reset function.
+    mov  ah, 0x00	            ; Disk reset function.
     mov  dl, [boot_drive]
     int  0x13
     jc  .FAILED
     jmp .STAGE2
 .FAILED:
     inc  cx
-    cmp  cx, 2               ; Let's give it 3 retries.
+    cmp  cx, 2                  ; Let's give it 3 retries.
     jle .LOOP
     jmp  DISK_RESET_FAILED
 .STAGE2:
@@ -99,22 +61,6 @@ ENTRY:
     jc  STAGE2_FAILED
     mov dl, [boot_drive]        ; Doing this again to be safe.
     jmp 0:stage2_addr           ; Leave to stage2.
-
-;=============================================================================================
-
-; Helper function to wait until the keyboard controller has data ready to be read.
-KB_WAIT:
-    in   al, 0x64
-    test al, 1                      ; Test bit 0 (output buffer status)
-    jz   KB_WAIT
-    ret
-
-; Helper function to wait until the keyboard controller is ready for a command.
-KB_CONTROLLER_WAIT:
-    in   al, 0x64
-    test al, 2                      ; Test bit 1 (input buffer status)
-    jnz  KB_CONTROLLER_WAIT
-    ret
 
 ;=============================================================================================
 
@@ -156,8 +102,10 @@ STAGE2_FAILED:
     call BIOS_PRINTS
 
 ERROR:
-    cli     ; Disable Interrupts.
-    hlt     ; Stop execution.
+    cli         ; Disable Interrupts.
+.LOOP:
+    hlt         ; Stop execution.
+    jmp .LOOP   ; Incase a NMI fires.
 
 ;=============================================================================================
 

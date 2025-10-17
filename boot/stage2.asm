@@ -6,9 +6,10 @@
 ;
 ;   Purpose: This file will do the following:
 ;       1) Store the boot drive number passed by boot.bin
-;       2) Initialize video mode and memory map from BIOS.
-;       3) Load kernel code at address A000h and relocate to 100000h. (Not using EDD)
-;       4) Bootstrap and then jump to kernel.elf
+;       2) Check and enable A20 using two of three methods. ; TODO: Eventually verify that A20 is actually enabled.
+;       3) Initialize video mode and memory map from BIOS.
+;       4) Load kernel code at address A000h and relocate to 100000h. (Not using EDD)
+;       5) Bootstrap and then jump to kernel.elf
 ;
 ;   TODO: Write a file system driver to load a kernel from a data region as opposed to flat sectors.
 ;
@@ -19,7 +20,7 @@ jmp short ENTRY
 
 kernel_addr_tmp equ 0xA000      ; Temporary address since we are not using BIOS extended functions.
 kernel_addr equ 0x100000        ; Address that elf_hdr + kernel_code/data will be loaded.
-kernel_size equ 24576
+kernel_size equ 16384
 kernel_lba  equ 9               ; LBA for kernel.elf on disk.
 kernel_text_offset: dd 0        ; The address we will eventually need to jump to start the kernel.
 
@@ -44,6 +45,7 @@ ENTRY:
     sti
 .INIT:
     mov [boot_drive], dl      ; Save the boot_drive number.
+    call BIOS_ENABLE_A20      ; 
     mov  dl, 3                ; Select video mode. 3 = 80*25
     call BIOS_VIDEO_MODE      ; Set video mode.
     call BIOS_MEMORY_MAP      ; Retrieve memory map from BIOS.
@@ -126,7 +128,7 @@ LOAD_KERNEL:
 ;       LOAD           0x002000 0x00101000 0x00101000 0x0000e 0x03000 RW  0x1000
 ;
 ;   Eventually we should maybe change this to actually parse the header in the boot loader rather than using i686-elf-readelf.
-;   But I'm not sure we need to do that since we know our kernel and this is our bootloader.
+;   But I'm not sure we need to do that since we know our kernel and this is our bootloader. And this seems to work.
 ;
 PARSE_ELF_AND_RELOCATE:
     xor si, si              ; Set up destination segment:offset.
@@ -149,7 +151,7 @@ PARSE_ELF_AND_RELOCATE:
     jl .LOOP1
 
     mov si, 0xC000          ; This should be where our section .data starts. That BIOS loaded into memory.
-    mov di, 0x9000          ; This should be where we load it into memory. 0x101000
+    mov di, 0x9000          ; This should be where we load it into memory. f800h:9000h = 0x101000
 
     xor cx, cx
 .LOOP2:
@@ -217,6 +219,63 @@ BIOS_PRINTNL:
     mov  al, 0xd
     call BIOS_PRINTC
     pop  ax
+    ret
+
+;
+;
+;
+BIOS_ENABLE_A20:
+    mov ax, 0x2402              ; Get A20 gate status.
+    int 0x15
+    jc .A20_ENABLE_FALLBACK     ; If this fails, jump to the keyboard method!
+    cmp al, 0x1                 ; Is it already enabled?
+    je .A20_ENABLED             ; Yes, we're done.
+    mov ax, 0x2401              ; Try to enable it.
+    int 0x15
+    jc .A20_ENABLE_FALLBACK     ; If this fails, jump to the keyboard method!
+    mov ax, 0x2402              ; Verify it worked.
+    int 0x15
+    jc .A20_ENABLE_FALLBACK     ; If verification fails, try the other way
+    cmp al, 0x1
+    je .A20_ENABLED             ; Success!
+.A20_ENABLE_FALLBACK:
+    cli
+    call KB_CONTROLLER_WAIT         ; Wait until controller is ready
+    mov  al, 0xad                   ; Command to disable the keyboard
+    out  0x64, al
+    call KB_CONTROLLER_WAIT
+    mov  al, 0xd0                   ; Command to read the output port.
+    out  0x64, al
+    call KB_WAIT
+    in   al, 0x60                   ; Read the output port value
+    push ax                         ; Save it
+    call KB_CONTROLLER_WAIT
+    mov  al, 0xd1                   ; Command to write to the output port
+    out  0x64, al
+    call KB_CONTROLLER_WAIT
+    pop  ax                         ; Get the original value back
+    or   al, 2                      ; Set bit 1 (the A20 gate enable bit)
+    out  0x60, al                   ; Write the new value back
+    call KB_CONTROLLER_WAIT
+    mov  al, 0xae                   ; Command to enable the keyboard
+    out  0x64, al
+    call KB_CONTROLLER_WAIT
+    sti
+.A20_ENABLED:
+    ret
+
+; Helper function to wait until the keyboard controller has data ready to be read.
+KB_WAIT:
+    in   al, 0x64
+    test al, 1                      ; Test bit 0 (output buffer status)
+    jz   KB_WAIT
+    ret
+
+; Helper function to wait until the keyboard controller is ready for a command.
+KB_CONTROLLER_WAIT:
+    in   al, 0x64
+    test al, 2                      ; Test bit 1 (input buffer status)
+    jnz  KB_CONTROLLER_WAIT
     ret
 
 ;   Sets the video mode. Also can be used to clear the screen?

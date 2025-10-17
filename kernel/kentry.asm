@@ -19,9 +19,9 @@ _ENTRY:
 
 HALT:
     cli
-.LOOP    
+.LOOP:    
     hlt
-    jmp  .LOOP
+    jmp  .LOOP      ; Just incase a nmi hits.
 
 ;=============================================================================================
 
