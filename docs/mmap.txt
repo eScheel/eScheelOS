@@ -1,5 +1,0 @@
-Scheel'Nix Memory MAP:
-
-0x1000   - 0x2FFF   : stage2.bin / bios_memory_map / stage2 stack.
-0x4000   - 0xFFFF   : kernel_addr_tmp. 49152 bytes.
-0x100000 - 0x200000 : kernel .text .rodata .data .bss 
