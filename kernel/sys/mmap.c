@@ -1,11 +1,8 @@
-#include <stddef.h>
-#include <stdint.h>
+#include <kernel.h>
 
-extern void vga_printc(char c);
-extern void vga_prints(const char* data);
-extern void vga_printh(uint32_t h);
+extern void memset(void* data, uint8_t c, size_t n);
 
-#define SMAP_entry_max 16
+#define SMAP_entry_max 32
 struct SMAP_entry {
     uint32_t base_addr_low;     // Base Address (64-bit)
     uint32_t base_addr_high;    // Base Address (64-bit)
@@ -16,29 +13,20 @@ struct SMAP_entry {
 }__attribute__((packed));
 
 /* ... */
-void display_memory_map(uint16_t* mmap_desc_addr)
+void memory_map_init(uint16_t* mmap_desc_addr)
 {
-    vga_prints("MMAP_ENTRIES: \0");
     size_t num_entries = (uint16_t)mmap_desc_addr[0];
-    vga_printh(num_entries);
-    vga_printc('\n');
 
     // ...
     struct SMAP_entry* entry_array = (struct SMAP_entry*)(mmap_desc_addr + 2);
     for(size_t i=0; i<num_entries; i++)
     {
         struct SMAP_entry* entry = &entry_array[i];
+
         if(entry->type != 0x01) { continue; }
 
-        vga_printh(entry->base_addr_high);
-        vga_printh(entry->base_addr_low);
-        vga_printc('|');
-
-        vga_printh(entry->length_high);
-        vga_printh(entry->length_low);
-        vga_printc('|');
-
-        vga_printh(entry->type);
-        vga_printc('\n');
+        // TODO: Save addr and length here ...
     }
+
+    return;
 }

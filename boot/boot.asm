@@ -6,14 +6,14 @@
 ;
 ;   Purpose: This file will do the following:
 ;       1) Force set CS to zero and store boot drive number passed by BIOS.
-;       2) Load and execute the stage2.bin code at address 7E00h.
+;       2) Load and execute the stage2.bin code at address 1000h.
 ;
 [org 0x7c00]
 [bits 16]
 
 jmp 0:ENTRY     ; Force set CS to zero.
 
-stage2_addr equ 0x7e00
+stage2_addr equ 0x1000
 stage2_size equ 4096
 stage2_sect equ 2           ; Sector Offset.
 

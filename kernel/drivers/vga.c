@@ -1,5 +1,4 @@
-#include <stddef.h>
-#include <stdint.h>
+#include <kernel.h>
 
 extern void OUTB(uint16_t addr, uint8_t byte);
 
@@ -21,9 +20,10 @@ void vga_init()
 {
 	color = 0x1f;
 	
-	for (column = 0; column < VGA_HEIGHT; column++) 
+	// Clear the screen.
+	for(column = 0; column < VGA_HEIGHT; column++) 
     {
-		for (row = 0; row < VGA_WIDTH; row++) 
+		for(row = 0; row < VGA_WIDTH; row++) 
         {
 			const size_t index = column * VGA_WIDTH + row;
 			terminal_buffer[index] = (uint16_t)' ' | (uint16_t)(color << 8);
@@ -32,7 +32,6 @@ void vga_init()
 
     column = 0;
     row = 0;
-
     return;
 }
 
@@ -50,10 +49,10 @@ static void vga_update_cursor()
 	 *  are the high and low bytes of the index that show
 	 *  where the hardware cursor is to be 'blinking'.
 	 */
-	OUTB(0x3d4, 14);
-	OUTB(0x3d5, (index >> 8));
-	OUTB(0x3d4, 15);
-	OUTB(0x3d5, index);
+	OUTB(0x3D4, 14);
+	OUTB(0x3D5, (index >> 8));
+	OUTB(0x3D4, 15);
+	OUTB(0x3D5, index);
 	return;
 }
 
@@ -62,7 +61,6 @@ void vga_putc(char c, size_t x, size_t y)
 {
 	uint16_t index = y * VGA_WIDTH + x;
 	terminal_buffer[index] = (uint16_t)c | (uint16_t)(color << 8);
-	vga_update_cursor();
 	return;
 }
 
@@ -127,6 +125,44 @@ void vga_printh(uint32_t h)
 	hexstr[n] = '\0';
 
 	vga_prints(hexstr);
+	return;
+}
+
+/* ... */
+void vga_printd(uint32_t d)
+{
+    char buffer[11];
+    int index = 0;
+
+    // The main loop won't run if d is 0, so we handle it here.
+    if (d == 0) {
+        vga_printc('0');
+        return;
+    }
+
+    // Main Logic: Convert number to ASCII in reverse order
+    // We use a temporary variable `num` so the original `d` isn't modified.
+    uint32_t num = d;
+
+    // This works by repeatedly taking the number modulo 10 (to get the last digit) 
+	// and then dividing by 10 (to remove the last digit).
+    while(num > 0) 
+	{
+        // num % 10` gives the rightmost digit (0-9).
+        // Adding '0' (ASCII value 48) converts it to the character '0'-'9'.
+        buffer[index] = (num % 10) + '0';
+        index++; 		// Move to the next spot in the buffer
+        num /= 10; 		// Remove the last digit
+    }
+
+    // We now print the buffer in reverse to get the correct order.
+    // The last valid character is at index `i - 1`.
+    while(index > 0) 
+	{
+        index--;
+        vga_printc(buffer[index]);
+    }
+
 	return;
 }
 

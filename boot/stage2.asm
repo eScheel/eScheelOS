@@ -13,14 +13,14 @@
 ;
 ;   TODO: Write a file system driver to load a kernel from a data region as opposed to flat sectors.
 ;
-[org 0x7e00]
+[org 0x1000]
 [bits 16]
 
 jmp short ENTRY
 
-kernel_addr_tmp equ 0xA000      ; Temporary address since we are not using BIOS extended functions.
+kernel_addr_tmp equ 0x4000      ; Temporary address since we are not using BIOS extended functions.
 kernel_addr equ 0x100000        ; Address that elf_hdr + kernel_code/data will be loaded.
-kernel_size equ 16384           ; 32 sectors. (offset)A000h + (size)4000h = (top)E000h
+kernel_size equ 32768           ; 32 sectors. (offset)A000h + (size)4000h = (top)E000h
 kernel_lba  equ 9               ; LBA for kernel.elf on disk.
 kernel_text_offset: dd 0        ; The address we will eventually need to jump to start the kernel.
 
@@ -40,8 +40,8 @@ ENTRY:
     mov  gs, ax
     mov  fs, ax
     mov  ss, ax             
-    mov  ax, 0x7c00
-    mov  sp, ax             ; sp = 0x7c00.
+    mov  ax, 0x3000         ; Place stack 4096 bytes above stage2 address.
+    mov  sp, ax             ; sp = 0x3000
     sti
 .INIT:
     mov [boot_drive], dl      ; Save the boot_drive number.
@@ -134,7 +134,7 @@ LOAD_KERNEL:
 PARSE_ELF_AND_RELOCATE:
     xor si, si              ; Set up destination segment:offset.
     mov gs, si
-    mov si, kernel_addr_tmp ; A000h is where the LOAD_KERNEL routine loaded the kernel.
+    mov si, kernel_addr_tmp ; 4000h is where the LOAD_KERNEL routine loaded the kernel.
     add si, 0x1000          ; We know that our section .text starts at. + 0x1000 after elf header.
 
     mov di, 0xf800          ; Set up destination segment:offset.
@@ -151,7 +151,7 @@ PARSE_ELF_AND_RELOCATE:
     cmp cx, 0x2000          ; Let's just load 8k here for .text + .rodata even though it might be less.
     jl .LOOP1
 
-    mov si, 0xD000          ; This should be where our section .data starts according to the legend above.
+    mov si, 0x7000          ; This should be where our section .data starts according to the legend above. 0x4000 + 0x1000 + 0x2000
     mov di, 0xA000          ; This should be where we load it into memory. f800h:A000h = 0x102000
 
     xor cx, cx

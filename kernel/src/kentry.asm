@@ -11,6 +11,8 @@ extern kernel_main
 extern vga_prints
 
 _ENTRY:
+    ; TODO: zero .bss
+
     mov ebp, stack_top
     mov esp, ebp
 
@@ -18,7 +20,9 @@ _ENTRY:
     mov [video_mode], al
     mov [mmap_desc_addr], bx
 
-    push word [mmap_desc_addr]
+    ;push edx    ; Pass boot drive to kernel main.
+    ;push eax    ; Pass video mode to kernel main.
+    push ebx    ; Pass mmap desc addr to kernel main.
     call kernel_main
 
 HALT:
