@@ -20,7 +20,7 @@ jmp short ENTRY
 
 kernel_addr_tmp equ 0xA000      ; Temporary address since we are not using BIOS extended functions.
 kernel_addr equ 0x100000        ; Address that elf_hdr + kernel_code/data will be loaded.
-kernel_size equ 16384
+kernel_size equ 16384           ; 32 sectors. (offset)A000h + (size)4000h = (top)E000h
 kernel_lba  equ 9               ; LBA for kernel.elf on disk.
 kernel_text_offset: dd 0        ; The address we will eventually need to jump to start the kernel.
 
@@ -118,23 +118,24 @@ LOAD_KERNEL:
 ;
 ;   Section Headers:
 ;         [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
-;         [ 1] .text             PROGBITS        00100000 001000 00003f 00  AX  0   0 4096
-;         [ 2] .data             PROGBITS        00101000 002000 00000e 00  WA  0   0 4096
-;         [ 3] .bss              NOBITS          00102000 00200e 002000 00  WA  0   0 4096
+;         [ 1] .text             PROGBITS        00100000 001000 0003ef 00  AX  0   0 4096
+;         [ 2] .rodata           PROGBITS        00101000 002000 00002d 00   A  0   0 4096
+;         [ 3] .data             PROGBITS        00102000 003000 00000c 00  WA  0   0 4096
+;         [ 4] .bss              NOBITS          00103000 00300c 004009 00  WA  0   0 4096
 ;
 ;   Program Headers:
 ;       Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
-;       LOAD           0x001000 0x00100000 0x00100000 0x0003f 0x0003f R E 0x1000
-;       LOAD           0x002000 0x00101000 0x00101000 0x0000e 0x03000 RW  0x1000
+;       LOAD           0x001000 0x00100000 0x00100000 0x0102d 0x0102d R E 0x1000
+;       LOAD           0x003000 0x00102000 0x00102000 0x0000c 0x05009 RW  0x1000
 ;
 ;   Eventually we should maybe change this to actually parse the header in the boot loader rather than using i686-elf-readelf.
-;   But I'm not sure we need to do that since we know our kernel and this is our bootloader. And this seems to work.
+;   But I'm not sure we need to do that since we know our kernel and this is our bootloader. And this seems to work. So far ..
 ;
 PARSE_ELF_AND_RELOCATE:
     xor si, si              ; Set up destination segment:offset.
     mov gs, si
     mov si, kernel_addr_tmp ; A000h is where the LOAD_KERNEL routine loaded the kernel.
-    add si, 0x1000          ; We know that our section .text starts at. + 0x1000
+    add si, 0x1000          ; We know that our section .text starts at. + 0x1000 after elf header.
 
     mov di, 0xf800          ; Set up destination segment:offset.
     mov fs, di
@@ -147,11 +148,11 @@ PARSE_ELF_AND_RELOCATE:
     inc di
     inc si                  ; Change this to use the rep instruction.
     inc cx
-    cmp cx, 0x1000          ; Let's just load 4k here even though it might be less.
+    cmp cx, 0x2000          ; Let's just load 8k here for .text + .rodata even though it might be less.
     jl .LOOP1
 
-    mov si, 0xC000          ; This should be where our section .data starts. That BIOS loaded into memory.
-    mov di, 0x9000          ; This should be where we load it into memory. f800h:9000h = 0x101000
+    mov si, 0xD000          ; This should be where our section .data starts according to the legend above.
+    mov di, 0xA000          ; This should be where we load it into memory. f800h:A000h = 0x102000
 
     xor cx, cx
 .LOOP2:
@@ -160,9 +161,11 @@ PARSE_ELF_AND_RELOCATE:
     inc di
     inc si                  ; Change this to use the rep instruction.
     inc cx
-    cmp cx, 0x3000          ; Let's just load 12k here for .data and .bss which follows right behind.
+    cmp cx, 0x1000          ; Let's just load 4k here for .data as we don't need to load .bss into memory?
     jl .LOOP2       
 
+    ; I think it will be easier to zero out .bss with the kernel.
+    ; Do I really even need to do that though..?
     ret
 
 
@@ -351,7 +354,7 @@ struc SMAP_entry
     .acpi:      resd 1  ; ACPI 3.0 Extended Attributes
 endstruc
 ; We'll allocate space for up to 16 entries for now.
-SMAP_entry_max equ 16
+SMAP_entry_max equ 32
 
 ; A structure to hold the entire memory map, which will be passed to the kernel.
 MMAP_DESC:

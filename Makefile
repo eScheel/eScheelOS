@@ -9,8 +9,11 @@ boot:
 	dd if=stage2.bin of=/mnt/c/Users/jacob/VirtualBox\ VMs/eScheelOS\ 32-bit/eScheelOS\ 32-bit.vhd bs=512 conv=notrunc seek=1
 
 kernel:
-	nasm kernel/kentry.asm -f elf32 -o kentry.o
-	i686-elf-gcc -c kernel/kernel.c -o kernel.o -ffreestanding -Wall -Wextra
+	nasm kernel/src/kentry.asm -f elf32  -o kentry.o
+	i686-elf-gcc -c kernel/src/kernel.c  -o kernel.o -ffreestanding -Wall -Wextra
+	i686-elf-gcc -c kernel/drivers/vga.c -o vga.o    -ffreestanding -Wall -Wextra
+	i686-elf-gcc -c kernel/lib/string.c  -o string.o -ffreestanding -Wall -Wextra
+	i686-elf-gcc -c kernel/sys/mmap.c	 -o mem.o    -ffreestanding -Wall -Wextra
 	i686-elf-ld *.o -T link.ld -o kernel.elf
 	dd if=kernel.elf of=/mnt/c/Users/jacob/VirtualBox\ VMs/eScheelOS\ 32-bit/eScheelOS\ 32-bit.vhd bs=512 conv=notrunc seek=9
 
@@ -18,4 +21,4 @@ clean-boot:
 	rm -rv boot.bin stage2.bin 
 	
 clean-kernel:
-	rm -rv kernel.elf kernel.o kentry.o
+	rm -rv kernel.elf *.o
