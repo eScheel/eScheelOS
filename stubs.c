@@ -25,3 +25,39 @@ void display_memory_map(uint16_t* mmap_desc_addr)
         vga_printc('\n');
     }
 }
+
+
+
+
+
+uint32_t available_memory = 0;
+size_t biggest_region_index = 0;
+
+
+
+    uint32_t biggest_region = 0;
+    for(size_t i=0; i<mmap_avail_entry_count; i++)
+    {
+        memory_region_t mmap_region = memory_map[i];
+
+        vga_printh(mmap_region.base);
+        vga_prints("  :  ");
+        vga_printd(mmap_region.length);
+        vga_printc('\n');
+
+        uint32_t region_size = mmap_region.length;
+        if(region_size > biggest_region)
+        {
+            biggest_region = region_size;
+            biggest_region_index = i+1;
+        }
+        available_memory += mmap_region.length;
+    }
+
+    vga_prints("Total Memory: \0");
+    vga_printd(available_memory/1048576);
+    vga_prints("MB between \0");
+    vga_printd(mmap_avail_entry_count);
+    vga_prints(" regions and the biggest region being \0");
+    vga_printd(biggest_region_index);
+    vga_printc('\n');

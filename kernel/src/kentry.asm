@@ -8,7 +8,8 @@
 ;       1) Store the boot drive number and the current video mode passed by stage2
 ;       2) Initialize our own GDT, IDT, PAGING, etc...
 ;       3) Pass the boot drive number and the current video mode to kernel_main.
-;       4) This file also holds some helper routines only available with assembly.
+;
+;   This file also holds some helper routines only available with assembly.
 ;
 [bits 32]
 

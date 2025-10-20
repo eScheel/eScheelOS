@@ -67,9 +67,17 @@ void vga_putc(char c, size_t x, size_t y)
 /* ... */
 void vga_printc(char c) 
 {
+	// Obtain the current cursor location and index.
 	const size_t index = column * VGA_WIDTH + row;
 
-	if(c == '\n')
+	// Handle NULL.
+	if(c == '\0')
+	{
+		return;
+	}
+
+	// Handle LF.
+	else if(c == '\n')
 	{
 		column += 1;
 		if(column == VGA_HEIGHT)
@@ -80,6 +88,13 @@ void vga_printc(char c)
 		row = 0;
 
 		goto end_vga_printc;
+	}
+
+	// Handle TAB.
+	else if(c == '\t')
+	{
+		// For now we will just make it behave like a space.
+		c = ' ';
 	}
 
 	terminal_buffer[index] = ((uint16_t)c | (uint16_t)(color << 8));
@@ -140,8 +155,8 @@ void vga_printd(uint32_t d)
         return;
     }
 
-    // Main Logic: Convert number to ASCII in reverse order
-    // We use a temporary variable `num` so the original `d` isn't modified.
+    // Main Logic is to Convert number to ASCII in reverse order
+    // We use a temporary variable num so the original d isn't modified.
     uint32_t num = d;
 
     // This works by repeatedly taking the number modulo 10 (to get the last digit) 
