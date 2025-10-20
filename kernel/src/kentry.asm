@@ -1,3 +1,15 @@
+;   eScheelOS
+;
+;   kentry.asm
+;
+;   Author: Jacob Scheel
+;
+;   This code will do the following:
+;       1) Store the boot drive number and the current video mode passed by stage2
+;       2) Initialize our own GDT, IDT, PAGING, etc...
+;       3) Pass the boot drive number and the current video mode to kernel_main.
+;       4) This file also holds some helper routines only available with assembly.
+;
 [bits 32]
 
 ;=============================================================================================
@@ -11,18 +23,24 @@ extern kernel_main
 extern vga_prints
 
 _ENTRY:
-    ; TODO: zero .bss
-
-    mov ebp, stack_top
+    mov ebp, stack_top          ; Stack is located at the top of BSS and grows downward.
     mov esp, ebp
 
-    mov [boot_drive], dl
-    mov [video_mode], al
-    mov [mmap_desc_addr], bx
+    mov [boot_drive], dl        ; So the kernel knows what drive it is on.
+    mov [video_mode], al        ; So the kernel knows what video driver to use. vga , vesa.
+    mov [mmap_desc_addr], bx    ; So the kernel knows where it should be using memory.
 
-    ;push edx    ; Pass boot drive to kernel main.
-    ;push eax    ; Pass video mode to kernel main.
-    push ebx    ; Pass mmap desc addr to kernel main.
+    ; TODO: GDT, IDT, PAGING, ETC... 
+
+    xor  ebx, ebx                   ; Maybe I don't need to do this?
+    xor  eax, eax                   ; Just a bit worried about the top bits being initialized.
+    xor  edx, edx                   ; I guess I need to push 32bit registers to my kernel main arguments.
+    mov  bx, word [mmap_desc_addr]
+    mov  al, byte [video_mode]
+    mov  dl, byte [boot_drive]
+    push edx                    ; Pass boot drive to kernel main.
+    push eax                    ; Pass video mode to kernel main.
+    push ebx                    ; Pass mmap desc addr to kernel main.
     call kernel_main
 
 HALT:

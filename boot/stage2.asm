@@ -4,11 +4,11 @@
 ;
 ;   Author: Jacob Scheel
 ;
-;   Purpose: This file will do the following:
+;   This code will do the following:
 ;       1) Store the boot drive number passed by boot.bin
 ;       2) Check and enable A20 using two of three methods. ; TODO: Eventually verify that A20 is actually enabled.
 ;       3) Initialize video mode and memory map from BIOS.
-;       4) Load kernel code at address A000h and relocate to 100000h. (Not using EDD)
+;       4) Load kernel code at address 4000h parse and relocate to 100000h.   (Seems more simple than parsing from uppermem.)
 ;       5) Bootstrap and then jump to kernel.elf
 ;
 ;   TODO: Write a file system driver to load a kernel from a data region as opposed to flat sectors.
@@ -20,7 +20,7 @@ jmp short ENTRY
 
 kernel_addr_tmp equ 0x4000      ; Temporary address since we are not using BIOS extended functions.
 kernel_addr equ 0x100000        ; Address that elf_hdr + kernel_code/data will be loaded.
-kernel_size equ 32768           ; 32 sectors. (offset)A000h + (size)4000h = (top)E000h
+kernel_size equ 32768           ; 64 sectors. (offset)4000h + (size)8000h = (top)C000h
 kernel_lba  equ 9               ; LBA for kernel.elf on disk.
 kernel_text_offset: dd 0        ; The address we will eventually need to jump to start the kernel.
 
@@ -62,53 +62,25 @@ ENTRY:
 
 ;=============================================================================================
 
-;
-;   Complements of nanobyte. Thanks!
-;   https://github.com/nanobyte-dev/nanobyte_os/blob/master/src/bootloader/stage1/boot.asm
-;
-;   Converts LBA to CHS.
-;   Store LBA Address in AX when calling. 
-;   Returns CX bits 0-5 sector , CX bits 6-15 cylinder , DH = head.
-;
-; For now we will just assume a disk size of 2 heads and 63 Sectors per track.
-; Eventually, I believe we are supposed to get these values from file system headers or something?
-;
-lba_to_chs_heads: db 2
-lba_to_chs_spt:   db 63     ; Sectors per track.
-;
-LBA_TO_CHS:
-    push ax
-    push dx
-    xor dx, dx			                 ; Set DX to zero before dividing
-    div word[lba_to_chs_spt]             ; AX = LBA / SectorsPerTrack
-  	; DX = LBA % SectorsPerTrack
-    inc dx			                     ; DX = (LBA % SectorsPerTrack + 1) = Sector			
-    mov cx, dx			                 ; Move our sector into CX
-    xor dx, dx
-    div word[lba_to_chs_heads]		     ; AX = (LBA / SectorsPerTrack) / Heads = cylinder
-  	; DX = (LBA / SectorsPerTrack) % Heads = head
-    mov dh, dl			                 ; Move our head into DH.
-    mov ch, al			                 ; 
-    shl ah, 6
-    or  cl, ah
-    pop ax
-    mov dl, al
-    pop ax
-    ret
-
-;=============================================================================================
+; Disk Address Packet for int 0x13, ah=0x42
+DAP:
+    db 0x10             ; Size of this packet (16 bytes)
+    db 0                ; Reserved, always 0
+.SECTORS:
+    dw 0                ; Number of sectors to read. Will be filled in LOAD_KERNEL
+.BUFFER:
+    dd kernel_addr_tmp  ; 32-bit flat address (segment:offset) where ES:BX will be 0x0000:0x4000
+.LBA_START:
+    dq kernel_lba       ; 64-bit starting LBA
 
 LOAD_KERNEL:
-    xor  bx, bx         
-    mov  es, bx              ; Indirectly set ES for ES:BX.
-    mov  ax, kernel_lba
-    call LBA_TO_CHS          ; This will return proper setup in cx - dh.
-    mov  bx, kernel_addr_tmp ; Set BX to start of kernel for ES:BX.
-    mov  al, kernel_size/512 ; Number of sectors to read.
-    mov  dl, [boot_drive]
-    mov  ah, 0x02            ; BIOS Read Sectors function.
-    int  0x13                ; Call BIOS disk interrupt.
-    jc   KERNEL_LOAD_FAILED
+    mov ax, kernel_size / 512
+    mov [DAP.SECTORS], ax
+    mov ah, 0x42                ; AH = The "Extended Read" function
+    mov dl, [boot_drive]        ; DL = Drive number
+    mov si, DAP                 ; DS:SI -> Pointer to our DAP structure
+    int 0x13                    ; Call the BIOS interrupt
+    jc KERNEL_LOAD_FAILED       ; Check for errors (carry flag is set on failure)
     ret
 
 ;=============================================================================================
@@ -118,28 +90,35 @@ LOAD_KERNEL:
 ;
 ;   Section Headers:
 ;         [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
-;         [ 1] .text             PROGBITS        00100000 001000 0003ef 00  AX  0   0 4096
-;         [ 2] .rodata           PROGBITS        00101000 002000 00002d 00   A  0   0 4096
+;         [ 1] .text             PROGBITS        00100000 001000 0004a1 00  AX  0   0 4096
+;         [ 2] .rodata           PROGBITS        00101000 002000 000030 00   A  0   0 4096
 ;         [ 3] .data             PROGBITS        00102000 003000 00000c 00  WA  0   0 4096
 ;         [ 4] .bss              NOBITS          00103000 00300c 004009 00  WA  0   0 4096
 ;
 ;   Program Headers:
 ;       Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
-;       LOAD           0x001000 0x00100000 0x00100000 0x0102d 0x0102d R E 0x1000
+;       LOAD           0x001000 0x00100000 0x00100000 0x01030 0x01030 R E 0x1000
 ;       LOAD           0x003000 0x00102000 0x00102000 0x0000c 0x05009 RW  0x1000
 ;
 ;   Eventually we should maybe change this to actually parse the header in the boot loader rather than using i686-elf-readelf.
 ;   But I'm not sure we need to do that since we know our kernel and this is our bootloader. And this seems to work. So far ..
 ;
+;   EDIT: I am finding out it is becoming very annoying to manually change the code when the kernel changes. I will need to parse elf hdr.
+;
+data_section_size equ   0x0c                        ; If the FileSiz above changes, change this to it.
+bss_zero_size     equ   0x5009 - data_section_size  ; MemSiz - FileSiz = .bss
+;
 PARSE_ELF_AND_RELOCATE:
     xor si, si              ; Set up destination segment:offset.
     mov gs, si
     mov si, kernel_addr_tmp ; 4000h is where the LOAD_KERNEL routine loaded the kernel.
+
+    call ENSURE_ELF         ; Let's at least make sure it is an ELF file.
     add si, 0x1000          ; We know that our section .text starts at. + 0x1000 after elf header.
 
-    mov di, 0xf800          ; Set up destination segment:offset.
+    mov di, 0xfA00          ; Set up destination segment:offset.
     mov fs, di
-    mov di, 0x8000          ; We are putting our kernel at 0x100000
+    mov di, 0x6000          ; We are putting our kernel at 0x100000
 
     xor cx, cx
 .LOOP1:
@@ -152,7 +131,7 @@ PARSE_ELF_AND_RELOCATE:
     jl .LOOP1
 
     mov si, 0x7000          ; This should be where our section .data starts according to the legend above. 0x4000 + 0x1000 + 0x2000
-    mov di, 0xA000          ; This should be where we load it into memory. f800h:A000h = 0x102000
+    mov di, 0x8000          ; This should be where we load it into memory. fA00h:8000h = 0x102000
 
     xor cx, cx
 .LOOP2:
@@ -164,10 +143,34 @@ PARSE_ELF_AND_RELOCATE:
     cmp cx, 0x1000          ; Let's just load 4k here for .data as we don't need to load .bss into memory?
     jl .LOOP2       
 
-    ; I think it will be easier to zero out .bss with the kernel.
-    ; Do I really even need to do that though..?
+    mov di, 0x8000              ; Let's reset di to be 0x8000 where we loaded .data into upper mem.
+    add di, data_section_size   ; Let's skip past the actual data size to zero .bss
+    xor cx, cx
+.LOOP3:
+    mov byte [fs:di], 0
+    inc di
+    inc cx
+    cmp cx, bss_zero_size       ; Our .bss should be 16384 bytes.
+    jl .LOOP3
+
     ret
 
+ENSURE_ELF:
+    pusha
+    inc si
+    mov al, byte [gs:si]
+    cmp al, 'E'
+    jne KERNEL_LOAD_FAILED 
+    inc si
+    mov al, byte [gs:si]
+    cmp al, 'L'
+    jne KERNEL_LOAD_FAILED
+    inc si
+    mov al, byte [gs:si]
+    cmp al, 'F'
+    jne KERNEL_LOAD_FAILED
+    popa
+    ret
 
 ;=============================================================================================
 

@@ -4,7 +4,7 @@
 ;
 ;   Author: Jacob Scheel
 ;
-;   Purpose: This file will do the following:
+;   This code will do the following:
 ;       1) Force set CS to zero and store boot drive number passed by BIOS.
 ;       2) Load and execute the stage2.bin code at address 1000h.
 ;

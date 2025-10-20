@@ -231,3 +231,54 @@ RELOCATE_KERNEL:
     cmp cx, kernel_size
     jl .LOOP
     ret
+
+
+;
+;   Complements of nanobyte. Thanks!
+;   https://github.com/nanobyte-dev/nanobyte_os/blob/master/src/bootloader/stage1/boot.asm
+;
+;   Converts LBA to CHS.
+;   Store LBA Address in AX when calling. 
+;   Returns CX bits 0-5 sector , CX bits 6-15 cylinder , DH = head.
+;
+; For now we will just assume a disk size of 2 heads and 63 Sectors per track.
+; Eventually, I believe we are supposed to get these values from file system headers or something?
+;
+lba_to_chs_heads: db 2
+lba_to_chs_spt:   db 63     ; Sectors per track.
+;
+LBA_TO_CHS:
+    push ax
+    push dx
+    xor dx, dx			                 ; Set DX to zero before dividing
+    div word[lba_to_chs_spt]             ; AX = LBA / SectorsPerTrack
+  	; DX = LBA % SectorsPerTrack
+    inc dx			                     ; DX = (LBA % SectorsPerTrack + 1) = Sector			
+    mov cx, dx			                 ; Move our sector into CX
+    xor dx, dx
+    div word[lba_to_chs_heads]		     ; AX = (LBA / SectorsPerTrack) / Heads = cylinder
+  	; DX = (LBA / SectorsPerTrack) % Heads = head
+    mov dh, dl			                 ; Move our head into DH.
+    mov ch, al			                 ; 
+    shl ah, 6
+    or  cl, ah
+    pop ax
+    mov dl, al
+    pop ax
+    ret
+
+;
+; CHS
+;
+LOAD_KERNEL:
+    xor  bx, bx         
+    mov  es, bx              ; Indirectly set ES for ES:BX.
+    mov  ax, kernel_lba
+    call LBA_TO_CHS          ; This will return proper setup in cx - dh.
+    mov  bx, kernel_addr_tmp ; Set BX to start of kernel for ES:BX.
+    mov  al, kernel_size/512 ; Number of sectors to read.
+    mov  dl, [boot_drive]
+    mov  ah, 0x02            ; BIOS Read Sectors function.
+    int  0x13                ; Call BIOS disk interrupt.
+    jc   KERNEL_LOAD_FAILED
+    ret

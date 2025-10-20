@@ -12,15 +12,19 @@ extern void memset(void* data, uint8_t c, size_t n);
 
 extern void memory_map_init(uint16_t* mmap_desc_addr);
 
+#define LOADING_SYMBOL  0xff
+
 const char *osname = "eScheel OS\n\0";
 
 /* ... */
-void kernel_main(uint16_t* mmap_desc_addr/*, uint8_t video_mode, uint8_t boot_drive*/) 
+void kernel_main(uint16_t* mmap_desc_addr, uint8_t video_mode, uint8_t boot_drive) 
 {
     vga_init();
     vga_prints(osname);
 
     memory_map_init(mmap_desc_addr);
 
+
+    vga_putc(LOADING_SYMBOL, 0, 24);  // Puts a character at 1 / 24 which is first left and bottom.
     return;
 }
