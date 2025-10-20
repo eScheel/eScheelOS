@@ -12,7 +12,8 @@ extern void memset(void* data, uint8_t c, size_t n);
 
 extern void memory_map_init(uint16_t* mmap_desc_addr);
 
-#define LOADING_SYMBOL  0xff
+extern size_t mmap_avail_entry_count;
+extern memory_region_t memory_map[SMAP_entry_max];
 
 const char *osname = "eScheel OS\n\0";
 
@@ -23,8 +24,17 @@ void kernel_main(uint16_t* mmap_desc_addr, uint8_t video_mode, uint8_t boot_driv
     vga_prints(osname);
 
     memory_map_init(mmap_desc_addr);
+    for(size_t i=0; i<mmap_avail_entry_count; i++)
+    {
+        memory_region_t mmap_region = memory_map[i];
+
+        vga_printh(mmap_region.base);
+        vga_prints("  :  ");
+        vga_printd(mmap_region.length);
+        vga_printc('\n');
+    }
 
 
-    vga_putc(LOADING_SYMBOL, 0, 24);  // Puts a character at 1 / 24 which is first left and bottom.
+    vga_putc(LOADING_SYMBOL, 0, 24);
     return;
 }

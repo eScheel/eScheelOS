@@ -2,7 +2,6 @@
 
 extern void memset(void* data, uint8_t c, size_t n);
 
-#define SMAP_entry_max 32
 struct SMAP_entry {
     uint32_t base_addr_low;     // Base Address (64-bit)
     uint32_t base_addr_high;    // Base Address (64-bit)
@@ -11,6 +10,9 @@ struct SMAP_entry {
     uint32_t type;              // Type of memory region (32-bit)
     uint32_t acpi;              // ACPI 3.0 Extended Attributes
 }__attribute__((packed));
+
+size_t mmap_avail_entry_count = 0;
+memory_region_t memory_map[SMAP_entry_max];
 
 /* ... */
 void memory_map_init(uint16_t* mmap_desc_addr)
@@ -22,10 +24,18 @@ void memory_map_init(uint16_t* mmap_desc_addr)
     for(size_t i=0; i<num_entries; i++)
     {
         struct SMAP_entry* entry = &entry_array[i];
-
         if(entry->type != 0x01) { continue; }
 
-        // TODO: Save addr and length here ...
+        uint64_t base   = ((uint64_t)entry->base_addr_high << 32) | entry->base_addr_low;
+        uint64_t length = ((uint64_t)entry->length_high << 32)    | entry->length_low;
+
+        if(mmap_avail_entry_count < SMAP_entry_max)
+        {
+            memory_map[mmap_avail_entry_count].base = base;
+            memory_map[mmap_avail_entry_count].length = length;
+            mmap_avail_entry_count += 1;          
+        }
+        
     }
 
     return;
