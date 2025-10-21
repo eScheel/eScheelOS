@@ -1,11 +1,11 @@
 #include <kernel.h>
 
 extern void vga_init();
-extern void vga_putc(char c, size_t x, size_t y);
-extern void vga_printc(char c);
-extern void vga_prints(const char* data);
-extern void vga_printh(uint32_t h);
-extern void vga_printd(uint32_t d);
+extern void vga_putc(char, size_t, size_t);
+extern void vga_printc(char);
+extern void vga_prints(const char*);
+extern void vga_printh(uint32_t);
+extern void vga_printd(uint32_t);
 
 extern size_t strlen(const char* str);
 extern void memset(void* data, uint8_t c, size_t n);
@@ -38,7 +38,6 @@ void kernel_main(uint16_t* mmap_desc_addr, uint8_t video_mode, uint8_t boot_driv
 
 
     // ...
-
-    //vga_putc(LOADING_SYMBOL, 0, 24);
+    vga_putc(LOADING_SYMBOL, 0, 24);
     return;
 }

@@ -19,7 +19,6 @@
 jmp short ENTRY
 
 kernel_addr_tmp equ 0x4000      ; Temporary address since we are not using BIOS extended functions.
-kernel_addr equ 0x100000        ; Address that elf_hdr + kernel_code/data will be loaded.
 kernel_size equ 32768           ; 64 sectors. (offset)4000h + (size)8000h = (top)C000h
 kernel_lba  equ 9               ; LBA for kernel.elf on disk.
 kernel_text_offset: dd 0        ; The address we will eventually need to jump to start the kernel.
@@ -88,25 +87,29 @@ LOAD_KERNEL:
 ;
 ;   kernel.elf
 ;
+;   Entry point address:    0x1000e0
+;
 ;   Section Headers:
 ;         [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
-;         [ 1] .text             PROGBITS        00100000 001000 0004a1 00  AX  0   0 4096
-;         [ 2] .rodata           PROGBITS        00101000 002000 000030 00   A  0   0 4096
-;         [ 3] .data             PROGBITS        00102000 003000 00000c 00  WA  0   0 4096
-;         [ 4] .bss              NOBITS          00103000 00300c 004009 00  WA  0   0 4096
+;         [ 1] .text             PROGBITS        00100000 001000 000792 00  AX  0   0 4096
+;         [ 2] .rodata           PROGBITS        00101000 002000 000045 00   A  0   0 4096
+;         [ 3] .data             PROGBITS        00102000 003000 000014 00  WA  0   0 4096
+;         [ 4] .bss              NOBITS          00103000 003014 004249 00  WA  0   0 4096
 ;
 ;   Program Headers:
 ;       Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
-;       LOAD           0x001000 0x00100000 0x00100000 0x01030 0x01030 R E 0x1000
-;       LOAD           0x003000 0x00102000 0x00102000 0x0000c 0x05009 RW  0x1000
+;       LOAD           0x001000 0x00100000 0x00100000 0x01045 0x01045 R E 0x1000
+;       LOAD           0x003000 0x00102000 0x00102000 0x00014 0x05249 RW  0x1000
 ;
 ;   Eventually we should maybe change this to actually parse the header in the boot loader rather than using i686-elf-readelf.
 ;   But I'm not sure we need to do that since we know our kernel and this is our bootloader. And this seems to work. So far ..
 ;
 ;   EDIT: I am finding out it is becoming very annoying to manually change the code when the kernel changes. I will need to parse elf hdr.
 ;
-data_section_size equ   0x0c                        ; If the FileSiz above changes, change this to it.
-bss_zero_size     equ   0x5249 - data_section_size  ; .data(MemSiz - FileSiz) = .bss
+kernel_entry_point equ 0x1000e0                    ; Address that elf_hdr + kernel_code/data will be loaded.
+text_rodata_size   equ 0x1045
+data_section_size  equ 0x14                        ; If the FileSiz above changes, change this to it.
+bss_zero_size      equ 0x5249 - data_section_size  ; .data(MemSiz - FileSiz) = .bss
 ;
 PARSE_ELF_AND_RELOCATE:
     xor si, si              ; Set up destination segment:offset.
@@ -125,9 +128,9 @@ PARSE_ELF_AND_RELOCATE:
     mov al, byte [gs:si]
     mov byte [fs:di], al    ; Move whats at section .text into 0x100000
     inc di
-    inc si                  ; Change this to use the rep instruction.
+    inc si                  ; TODO: Change this to use the rep instruction.
     inc cx
-    cmp cx, 0x2000          ; Let's just load 8k here for .text + .rodata even though it might be less.
+    cmp cx, text_rodata_size
     jl .LOOP1
 
     mov si, 0x7000          ; This should be where our section .data starts according to the legend above. 0x4000 + 0x1000 + 0x2000
@@ -138,9 +141,9 @@ PARSE_ELF_AND_RELOCATE:
     mov al, byte [gs:si]
     mov byte [fs:di], al    ; Move whats at section .text into 0x100000
     inc di
-    inc si                  ; Change this to use the rep instruction.
+    inc si                  ; TODO: Change this to use the rep instruction.
     inc cx
-    cmp cx, 0x1000          ; Let's just load 4k here for .data as we don't need to load .bss into memory?
+    cmp cx, data_section_size
     jl .LOOP2       
 
     mov di, 0x8000              ; Let's reset di to be 0x8000 where we loaded .data into upper mem.
@@ -150,7 +153,7 @@ PARSE_ELF_AND_RELOCATE:
     mov byte [fs:di], 0
     inc di
     inc cx
-    cmp cx, bss_zero_size       ; Our .bss should be 16384 bytes.
+    cmp cx, bss_zero_size
     jl .LOOP3
 
     ret
@@ -415,4 +418,4 @@ BOOTSTRAP32:
     mov bx,  MMAP_DESC        ; Pass memory map buffer address to kernel.
     
     ; ...
-    jmp CODE_SEG:kernel_addr   ; CS:100000h
+    jmp CODE_SEG:kernel_entry_point 

@@ -20,22 +20,33 @@ section .text
 global _ENTRY
 global OUTB
 global INB
+global GDT_DESC
+extern gdt_init
 extern kernel_main
 extern vga_prints
 
 _ENTRY:
     mov ebp, stack_top          ; Stack is located at the top of BSS and grows downward.
     mov esp, ebp
-
     mov [boot_drive], dl        ; So the kernel knows what drive it is on.
     mov [video_mode], al        ; So the kernel knows what video driver to use. vga , vesa.
     mov [mmap_desc_addr], bx    ; So the kernel knows where it should be using memory.
+    call gdt_init
+    lgdt[GDT_DESC]
+    mov ax, 0x10                ; Load our data segment selector.
+    mov ds, ax
+    mov es, ax
+    mov gs, ax
+    mov fs, ax
+    mov ss, ax
+    jmp 0x08:FLUSH
+FLUSH:
 
-    ; TODO: GDT, IDT, PAGING, ETC... 
+    ; TODO: IDT, PAGING, ETC... 
 
-    xor  ebx, ebx                   ; Maybe I don't need to do this?
-    xor  eax, eax                   ; Just a bit worried about the top bits being initialized.
-    xor  edx, edx                   ; I guess I need to push 32bit registers to my kernel main arguments.
+    xor  ebx, ebx               ; Zero out to be sure top bits are uninitialized.
+    xor  eax, eax                   
+    xor  edx, edx                   
     mov  bx, word [mmap_desc_addr]
     mov  al, byte [video_mode]
     mov  dl, byte [boot_drive]
@@ -74,6 +85,10 @@ msg_halted: db  "System Halted ...",0
 ;=============================================================================================
 
 section .data
+
+GDT_DESC: 
+    dw 0
+    dd 0
 
 boot_drive: db 0
 video_mode: db 0
