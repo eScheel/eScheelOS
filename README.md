@@ -2,5 +2,11 @@
 
 eScheel Operating System.
 
+Targeted for x86_64.
 
-As of now this is only targeted for x86_64.
+Really just a reason to learn and write in assembly.
+
+I'm not very good at this ...
+
+
+
