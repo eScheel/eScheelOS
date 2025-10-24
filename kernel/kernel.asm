@@ -6,32 +6,44 @@
 ;
 ;   This code will do the following:
 ;       1) Store the boot drive number and the current video mode passed by stage2
-;       2) Initialize our own GDT, IDT, PAGING, etc...
-;       3) Pass the boot drive number and the current video mode to kernel_main.
+;       2) Setup the stack and initialize our own GDT.
+;       3) Continue to setup the IDT, PAGING, etc...
 ;
-;   This file also holds some helper routines only available with assembly.
+;   This is the main kernel file.
 ;
 [bits 32]
 
 ;=============================================================================================
-
 section .text
 
-global _ENTRY
+global INIT
 global OUTB
 global INB
 global GDT_DESC
+global IDT_DESC
 extern gdt_init
-extern kernel_main
-extern vga_prints
+extern vga_init
+extern memory_map_init
 
-_ENTRY:
+extern vga_putc
+extern vga_printc
+extern vga_prints
+extern vga_printh
+extern vga_printd
+
+extern memory_map
+extern available_memory_size
+extern available_memory_map
+
+;=============================================================================================
+
+INIT:
     mov ebp, stack_top          ; Stack is located at the top of BSS and grows downward.
     mov esp, ebp
-    mov [boot_drive], dl        ; So the kernel knows what drive it is on.
-    mov [video_mode], al        ; So the kernel knows what video driver to use. vga , vesa.
-    mov [mmap_desc_addr], bx    ; So the kernel knows where it should be using memory.
-    call gdt_init
+    mov [boot_drive], dl
+    mov [video_mode], al
+    mov [mmap_desc_addr], bx
+    call gdt_init               ; Initialize the Global Descriptor table.         
     lgdt[GDT_DESC]
     mov ax, 0x10                ; Load our data segment selector.
     mov ds, ax
@@ -39,24 +51,28 @@ _ENTRY:
     mov gs, ax
     mov fs, ax
     mov ss, ax
-    jmp 0x08:FLUSH
+    jmp 0x08:FLUSH             
 FLUSH:
-
-    ; TODO: IDT, PAGING, ETC... 
-
-    xor  ebx, ebx               ; Zero out to be sure top bits are uninitialized.
-    xor  eax, eax                   
-    xor  edx, edx                   
-    mov  bx, word [mmap_desc_addr]
-    mov  al, byte [video_mode]
-    mov  dl, byte [boot_drive]
-    push edx                    ; Pass boot drive to kernel main.
-    push eax                    ; Pass video mode to kernel main.
-    push ebx                    ; Pass mmap desc addr to kernel main.
-    call kernel_main
+    call vga_init                       ; Initialize graphics.
+    push dword str_os_name
+    call vga_prints
+    xor  ebx, ebx                       ; Parse and take control of the memory map passed by BIOS.
+    mov  bx, word [mmap_desc_addr] 
+    push ebx
+    call memory_map_init
+    push dword str_total_mem            ; Display total available memory.
+    call vga_prints
+    xor  edx, edx                             
+    mov  eax, dword [available_memory_size]
+    mov  ecx, 1048576
+    div  ecx                
+    push dword eax
+    call vga_printd
+    push dword str_megabytes
+    call vga_prints
 
 HALT:
-    push dword msg_halted
+    push dword str_halted
     call vga_prints
     cli
 .LOOP:    
@@ -77,18 +93,25 @@ INB:
     ret
 
 ;=============================================================================================
-
 section .rodata
 
-msg_halted: db  "System Halted ...",0
+str_halted: db  "System Halted ...",0
+str_os_name: db "eScheel OS",0xa,0
+str_total_mem: db "Total Memory: ",0
+str_megabytes: db "MB",10,0
 
 ;=============================================================================================
-
 section .data
 
 GDT_DESC: 
     dw 0
     dd 0
+
+IDT_DESC:
+    dw 0
+    dd 0
+
+;=============================================================================================
 
 boot_drive: db 0
 video_mode: db 0
@@ -96,7 +119,6 @@ video_mode: db 0
 mmap_desc_addr: dw 0
 
 ;=============================================================================================
-
 section .bss
 
 stack_bottom:

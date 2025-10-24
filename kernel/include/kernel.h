@@ -6,11 +6,9 @@
 
 #define LOADING_SYMBOL  0xff
 
-#define SMAP_entry_max 32
-typedef struct {
-    uint64_t base;
-    uint64_t length;
-}memory_region_t;
-
+void vga_printc(char);
+void vga_prints(const char*);
+void vga_printd(uint32_t);
+void vga_printh(uint32_t);
 
 #endif // __KERNEL_H

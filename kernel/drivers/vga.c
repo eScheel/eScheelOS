@@ -1,37 +1,39 @@
 #include <kernel.h>
 
-extern void OUTB(uint16_t addr, uint8_t byte);
+extern void OUTB(uint16_t, uint8_t);
 
-extern size_t strlen(const char* str);
-extern void memset(void* data, uint8_t c, size_t n);
+extern size_t strlen(const char*);
+extern void memset(void*, uint8_t, size_t);
 
 #define VGA_WIDTH  80
 #define VGA_HEIGHT 25
-#define VGA_MEMORY 0xB8000 
+#define VGA_MEMORY 0xB8000
 
-size_t row;
-size_t column;
-uint8_t color;
+struct video_graphics_array {
+	size_t row;
+	size_t column;
+	uint8_t color;
+}vga;
 
 uint16_t* terminal_buffer = (uint16_t*)VGA_MEMORY;
 
 /* ... */
 void vga_init() 
 {
-	color = 0x1f;
+	vga.color = 0x1f;
 	
 	// Clear the screen.
-	for(column = 0; column < VGA_HEIGHT; column++) 
+	for(vga.column = 0; vga.column < VGA_HEIGHT; vga.column++) 
     {
-		for(row = 0; row < VGA_WIDTH; row++) 
+		for(vga.row = 0; vga.row < VGA_WIDTH; vga.row++) 
         {
-			const size_t index = column * VGA_WIDTH + row;
-			terminal_buffer[index] = (uint16_t)' ' | (uint16_t)(color << 8);
+			const size_t index = vga.column * VGA_WIDTH + vga.row;
+			terminal_buffer[index] = (uint16_t)' ' | (uint16_t)(vga.color << 8);
 		}
 	}
 
-    column = 0;
-    row = 0;
+    vga.column = 0;
+    vga.row = 0;
     return;
 }
 
@@ -42,7 +44,7 @@ static void vga_update_cursor()
 	 * The equation for finding the index in a linear chunk of memory.
 	 * 	Index = [(y * width) + x]
 	 */
-	uint16_t index = column * VGA_WIDTH + row;
+	uint16_t index = vga.column * VGA_WIDTH + vga.row;
 	/* 
 	 *  This sends a command to indicies 14 and 15 in the
 	 *  CRT Control Register of the VGA controller. These
@@ -60,7 +62,7 @@ static void vga_update_cursor()
 void vga_putc(char c, size_t x, size_t y)
 {
 	uint16_t index = y * VGA_WIDTH + x;
-	terminal_buffer[index] = (uint16_t)c | (uint16_t)(color << 8);
+	terminal_buffer[index] = (uint16_t)c | (uint16_t)(vga.color << 8);
 	return;
 }
 
@@ -68,7 +70,7 @@ void vga_putc(char c, size_t x, size_t y)
 void vga_printc(char c) 
 {
 	// Obtain the current cursor location and index.
-	const size_t index = column * VGA_WIDTH + row;
+	const size_t index = vga.column * VGA_WIDTH + vga.row;
 
 	// Handle NULL.
 	if(c == '\0')
@@ -79,13 +81,13 @@ void vga_printc(char c)
 	// Handle LF.
 	else if(c == '\n')
 	{
-		column += 1;
-		if(column == VGA_HEIGHT)
+		vga.column += 1;
+		if(vga.column == VGA_HEIGHT)
         {
-			column = 0;
+			vga.column = 0;
         }
 
-		row = 0;
+		vga.row = 0;
 
 		goto end_vga_printc;
 	}
@@ -97,16 +99,16 @@ void vga_printc(char c)
 		c = ' ';
 	}
 
-	terminal_buffer[index] = ((uint16_t)c | (uint16_t)(color << 8));
-	row += 1;
+	terminal_buffer[index] = ((uint16_t)c | (uint16_t)(vga.color << 8));
+	vga.row += 1;
 
-	if (row == VGA_WIDTH) 
+	if (vga.row == VGA_WIDTH) 
     {
-		row = 0;
-		column += 1;
-		if(column == VGA_HEIGHT)
+		vga.row = 0;
+		vga.column += 1;
+		if(vga.column == VGA_HEIGHT)
         {
-			column = 0;		// TODO: Handle scrolling.
+			vga.column = 0;		// TODO: Handle scrolling.
         }
 	}
 
@@ -131,14 +133,22 @@ void vga_printh(uint32_t h)
 	int n = 0;
 	char hexstr[9];
 
+	// Loop through the 32-bit integer, 4 bits (one nibble) at a time.
+    // Start at bit 28 (the most significant nibble) and go down to bit 0.
 	for(i=28; i>=0; i-=4) 
 	{
+		// Isolate the current nibble.
+        // (h >> i): Right-shift the integer to move the desired nibble to the least significant position.
+        //  & 0x0f:   Use a bitwise AND with a mask (binary 00001111) to isolate the 4 bits.
 		uint8_t x = (h >> i) & 0x0f;
+
+		// Convert the numeric value (0-15) of the nibble to its ASCII hex character ('0'-'9', 'A'-'F').
+        // This is done by using the value 'x' as an index into a string literal containing all hex characters.
 		hexstr[n] = "0123456789ABCDEF"[x];
 		n += 1;
 	}
+	// Let's NULL termiate the string now before we try to print it.
 	hexstr[n] = '\0';
-
 	vga_prints(hexstr);
 	return;
 }
@@ -171,7 +181,7 @@ void vga_printd(uint32_t d)
     }
 
     // We now print the buffer in reverse to get the correct order.
-    // The last valid character is at index `i - 1`.
+    // The last valid character is at index i - 1
     while(index > 0) 
 	{
         index--;

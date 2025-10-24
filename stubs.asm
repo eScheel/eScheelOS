@@ -282,3 +282,42 @@ LOAD_KERNEL:
     int  0x13                ; Call BIOS disk interrupt.
     jc   KERNEL_LOAD_FAILED
     ret
+
+
+
+
+
+
+
+
+    xor  ebx, ebx               ; Zero out to be sure top bits are uninitialized.
+    xor  eax, eax                   
+    xor  edx, edx                   
+    mov  bx, word [mmap_desc_addr]
+    mov  al, byte [video_mode]
+    mov  dl, byte [boot_drive]
+    push edx                    ; Pass boot drive to kernel main.
+    push eax                    ; Pass video mode to kernel main.
+    push ebx                    ; Pass mmap desc addr to kernel main.
+    call kernel_main
+
+
+
+
+
+
+
+
+
+
+
+OUTB:
+    mov edx, [esp + 4]	; Move first argument onto the stack.
+    mov al,  [esp + 8]	; Move second argument onto the stack.
+    out dx,  al		    ; Write to the I/O port.
+    ret 	
+
+INB:
+    mov edx, [esp + 4]	; Move first argument onto the stack.
+    in  al,  dx		    ; Read from the I/O port.
+    ret

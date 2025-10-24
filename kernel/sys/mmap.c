@@ -1,7 +1,6 @@
 #include <kernel.h>
 
-extern void memset(void* data, uint8_t c, size_t n);
-
+#define SMAP_entry_max 32
 struct SMAP_entry {
     uint32_t base_addr_low;     // Base Address (64-bit)
     uint32_t base_addr_high;    // Base Address (64-bit)
@@ -11,8 +10,15 @@ struct SMAP_entry {
     uint32_t acpi;              // ACPI 3.0 Extended Attributes
 }__attribute__((packed));
 
+typedef struct {
+    uint64_t base;
+    uint64_t length;
+}memory_region_t;
+
 size_t mmap_avail_entry_count = 0;
 memory_region_t memory_map[SMAP_entry_max];
+uint32_t available_memory_size = 0;
+memory_region_t available_memory_map[SMAP_entry_max];
 
 /* ... */
 void memory_map_init(uint16_t* mmap_desc_addr)
@@ -24,6 +30,8 @@ void memory_map_init(uint16_t* mmap_desc_addr)
     for(size_t i=0; i<num_entries; i++)
     {
         struct SMAP_entry* entry = &entry_array[i];
+
+        // If it's not available, let's just skip it.
         if(entry->type != 0x01) { continue; }
 
         uint64_t base   = ((uint64_t)entry->base_addr_high << 32) | entry->base_addr_low;
@@ -36,6 +44,13 @@ void memory_map_init(uint16_t* mmap_desc_addr)
             mmap_avail_entry_count += 1;          
         }
         
+    }
+
+    // Let's fill in our structure of available memory region addr and size.
+    for(size_t i=0; i<mmap_avail_entry_count; i++)
+    {
+        available_memory_map[i] = memory_map[i];
+        available_memory_size += available_memory_map[i].length;
     }
 
     return;

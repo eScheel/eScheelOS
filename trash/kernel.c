@@ -7,10 +7,10 @@ extern void vga_prints(const char*);
 extern void vga_printh(uint32_t);
 extern void vga_printd(uint32_t);
 
-extern size_t strlen(const char* str);
-extern void memset(void* data, uint8_t c, size_t n);
+extern size_t strlen(const char*);
+extern void memset(void*, uint8_t, size_t);
 
-extern void memory_map_init(uint16_t* mmap_desc_addr);
+extern void memory_map_init(uint16_t*);
 
 extern size_t mmap_avail_entry_count;
 extern memory_region_t memory_map[SMAP_entry_max];
@@ -38,6 +38,8 @@ void kernel_main(uint16_t* mmap_desc_addr, uint8_t video_mode, uint8_t boot_driv
 
 
     // ...
-    vga_putc(LOADING_SYMBOL, 0, 24);
+
+
+    //vga_putc(LOADING_SYMBOL, 0, 24);
     return;
 }

@@ -18,16 +18,16 @@
 
 jmp short ENTRY
 
-kernel_addr_tmp equ 0x4000      ; Temporary address since we are not using BIOS extended functions.
-kernel_size equ 32768           ; 64 sectors. (offset)4000h + (size)8000h = (top)C000h
+kernel_addr_tmp equ 0x4000      ; Temporary address in low memory to hold the kernel while we parse elf.
+kernel_size equ 32768
 kernel_lba  equ 9               ; LBA for kernel.elf on disk.
-kernel_text_offset: dd 0        ; The address we will eventually need to jump to start the kernel.
 
 video_mode: db 0    ; Default video mode passed to kernel via al register.
 boot_drive: db 0    ; Boot drive passed to kernel via dl register.
 
 msg_mmap_fail:   db 'error: Failed to get valid memory map form BIOS.',0
 msg_kernel_fail: db 'error: Failed to load the kernel.',0
+msg_invalid_elf: db 'error: Failed to locate a valid elf file.',0
 
 ;=============================================================================================
 
@@ -87,29 +87,29 @@ LOAD_KERNEL:
 ;
 ;   kernel.elf
 ;
-;   Entry point address:    0x1000e0
+;   Entry point address:    0x100150
 ;
 ;   Section Headers:
 ;         [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
-;         [ 1] .text             PROGBITS        00100000 001000 000792 00  AX  0   0 4096
-;         [ 2] .rodata           PROGBITS        00101000 002000 000045 00   A  0   0 4096
+;         [ 1] .text             PROGBITS        00100000 001000 000844 00  AX  0   0 4096
+;         [ 2] .rodata           PROGBITS        00101000 002000 00004a 00   A  0   0 4096
 ;         [ 3] .data             PROGBITS        00102000 003000 000014 00  WA  0   0 4096
-;         [ 4] .bss              NOBITS          00103000 003014 004249 00  WA  0   0 4096
+;         [ 4] .bss              NOBITS          00103000 003014 004c6c 00  WA  0   0 4096
 ;
 ;   Program Headers:
 ;       Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
-;       LOAD           0x001000 0x00100000 0x00100000 0x01045 0x01045 R E 0x1000
-;       LOAD           0x003000 0x00102000 0x00102000 0x00014 0x05249 RW  0x1000
+;       LOAD           0x001000 0x00100000 0x00100000 0x0104a 0x0104a R E 0x1000
+;       LOAD           0x003000 0x00102000 0x00102000 0x00014 0x05c6c RW  0x1000
 ;
 ;   Eventually we should maybe change this to actually parse the header in the boot loader rather than using i686-elf-readelf.
 ;   But I'm not sure we need to do that since we know our kernel and this is our bootloader. And this seems to work. So far ..
 ;
 ;   EDIT: I am finding out it is becoming very annoying to manually change the code when the kernel changes. I will need to parse elf hdr.
 ;
-kernel_entry_point equ 0x1000e0                    ; Address that elf_hdr + kernel_code/data will be loaded.
-text_rodata_size   equ 0x1045
+kernel_entry_point equ 0x100150                    ; Address that elf_hdr + kernel_code/data will be loaded.
+text_rodata_size   equ 0x104a
 data_section_size  equ 0x14                        ; If the FileSiz above changes, change this to it.
-bss_zero_size      equ 0x5249 - data_section_size  ; .data(MemSiz - FileSiz) = .bss
+bss_zero_size      equ 0x5c6c - data_section_size  ; .data(MemSiz - FileSiz) = .bss
 ;
 PARSE_ELF_AND_RELOCATE:
     xor si, si              ; Set up destination segment:offset.
@@ -133,7 +133,7 @@ PARSE_ELF_AND_RELOCATE:
     cmp cx, text_rodata_size
     jl .LOOP1
 
-    mov si, 0x7000          ; This should be where our section .data starts according to the legend above. 0x4000 + 0x1000 + 0x2000
+    mov si, 0x7000          ; This should be where our section .data starts after .text and .rodata. 0x4000 + 0x1000 + 0x2000
     mov di, 0x8000          ; This should be where we load it into memory. fA00h:8000h = 0x102000
 
     xor cx, cx
@@ -160,18 +160,21 @@ PARSE_ELF_AND_RELOCATE:
 
 ENSURE_ELF:
     pusha
+;    mov al, byte [gs:di]
+;    cmp al, 0x7f
+;    jne ELF_PARSE_FAILED
     inc si
     mov al, byte [gs:si]
     cmp al, 'E'
-    jne KERNEL_LOAD_FAILED 
+    jne ELF_PARSE_FAILED 
     inc si
     mov al, byte [gs:si]
     cmp al, 'L'
-    jne KERNEL_LOAD_FAILED
+    jne ELF_PARSE_FAILED
     inc si
     mov al, byte [gs:si]
     cmp al, 'F'
-    jne KERNEL_LOAD_FAILED
+    jne ELF_PARSE_FAILED
     popa
     ret
 
@@ -185,10 +188,17 @@ MEMORY_MAP_FAILED:
 KERNEL_LOAD_FAILED:
     lea  si, [msg_kernel_fail]
     call BIOS_PRINTS
+    jmp  HALT
+
+ELF_PARSE_FAILED:
+    lea  si, [msg_invalid_elf]
+    call BIOS_PRINTS 
 
 HALT:
-    cli         ; Disable Interrupts.
-    jmp  $      ; hlt , but safe for NMI as well.
+    cli
+.LOOP:    
+    hlt
+    jmp  .LOOP      ; Just incase a nmi hits.
 
 ;=============================================================================================
 
@@ -216,18 +226,6 @@ BIOS_PRINTS:
     jmp .LOOP               ; Do it again.
 BIOS_PRINTS_DONE:
     popa
-    ret
-
-;
-;
-;
-BIOS_PRINTNL:
-    push ax
-    mov  al, 0xa
-    call BIOS_PRINTC
-    mov  al, 0xd
-    call BIOS_PRINTC
-    pop  ax
     ret
 
 ;
