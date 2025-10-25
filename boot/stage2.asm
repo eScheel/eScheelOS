@@ -160,9 +160,9 @@ PARSE_ELF_AND_RELOCATE:
 
 ENSURE_ELF:
     pusha
-;    mov al, byte [gs:di]
-;    cmp al, 0x7f
-;    jne ELF_PARSE_FAILED
+    mov al, byte [gs:si]
+    cmp al, 0x7f
+    jne ELF_PARSE_FAILED
     inc si
     mov al, byte [gs:si]
     cmp al, 'E'
