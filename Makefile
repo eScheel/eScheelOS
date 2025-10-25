@@ -6,8 +6,8 @@ boot:
 	nasm boot/boot.asm -f bin -o boot.bin
 	nasm boot/stage2.asm -f bin -o stage2.bin
 	
-	dd if=boot.bin   of=/mnt/c/Users/jacob/VirtualBox\ VMs/eScheelOS\ 32-bit/eScheelOS\ 32-bit.vhd bs=512 conv=notrunc
-	dd if=stage2.bin of=/mnt/c/Users/jacob/VirtualBox\ VMs/eScheelOS\ 32-bit/eScheelOS\ 32-bit.vhd bs=512 conv=notrunc seek=1
+	dd if=boot.bin   of=/mnt/c/Users/jscheel/VirtualBox\ VMs/eScheelOS\ 32-bit/eScheelOS\ 32-bit.vhd bs=512 conv=notrunc
+	dd if=stage2.bin of=/mnt/c/Users/jscheel/VirtualBox\ VMs/eScheelOS\ 32-bit/eScheelOS\ 32-bit.vhd bs=512 conv=notrunc seek=1
 
 kernel:
 	nasm kernel/kernel.asm -f elf32  -o kernel.o
@@ -20,7 +20,7 @@ kernel:
 
 	i686-elf-ld *.o -T link.ld -o kernel.elf
 
-	dd if=kernel.elf of=/mnt/c/Users/jacob/VirtualBox\ VMs/eScheelOS\ 32-bit/eScheelOS\ 32-bit.vhd bs=512 conv=notrunc seek=9
+	dd if=kernel.elf of=/mnt/c/Users/jscheel/VirtualBox\ VMs/eScheelOS\ 32-bit/eScheelOS\ 32-bit.vhd bs=512 conv=notrunc seek=9
 
 clean-boot:
 	rm -rv boot.bin stage2.bin 
