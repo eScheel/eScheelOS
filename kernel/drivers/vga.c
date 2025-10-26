@@ -2,9 +2,6 @@
 
 extern void OUTB(uint16_t, uint8_t);
 
-extern size_t strlen(const char*);
-extern void memset(void*, uint8_t, size_t);
-
 #define VGA_WIDTH  80
 #define VGA_HEIGHT 25
 #define VGA_MEMORY 0xB8000

@@ -19,9 +19,6 @@ section .text
 global INIT
 global OUTB
 global INB
-global GDT_DESC
-global IDT_DESC
-extern gdt_init
 extern vga_init
 extern memory_map_init
 
@@ -40,19 +37,11 @@ extern available_memory_map
 INIT:
     mov ebp, stack_top          ; Stack is located at the top of BSS and grows downward.
     mov esp, ebp
+
     mov [boot_drive], dl
     mov [video_mode], al
     mov [mmap_desc_addr], bx
-    call gdt_init               ; Initialize the Global Descriptor table.         
-    lgdt[GDT_DESC]
-    mov ax, 0x10                ; Load our data segment selector.
-    mov ds, ax
-    mov es, ax
-    mov gs, ax
-    mov fs, ax
-    mov ss, ax
-    jmp 0x08:FLUSH             
-FLUSH:
+
     call vga_init                       ; Initialize graphics.
     push dword str_os_name
     call vga_prints
@@ -64,7 +53,7 @@ FLUSH:
     call vga_prints
     xor  edx, edx                             
     mov  eax, dword [available_memory_size]
-    mov  ecx, 1048576
+    mov  ecx, 1048576                   ; Divide by 1024*1024 to get MB value.
     div  ecx                
     push dword eax
     call vga_printd
@@ -95,23 +84,13 @@ INB:
 ;=============================================================================================
 section .rodata
 
-str_halted: db  "System Halted ...",0
-str_os_name: db "eScheel OS",0xa,0
+str_halted:    db "System Halted ...",0
+str_os_name:   db "eScheel OS",0xa,0
 str_total_mem: db "Total Memory: ",0
 str_megabytes: db "MB",10,0
 
 ;=============================================================================================
 section .data
-
-GDT_DESC: 
-    dw 0
-    dd 0
-
-IDT_DESC:
-    dw 0
-    dd 0
-
-;=============================================================================================
 
 boot_drive: db 0
 video_mode: db 0

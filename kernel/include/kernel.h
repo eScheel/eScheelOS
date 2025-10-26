@@ -11,4 +11,11 @@ void vga_prints(const char*);
 void vga_printd(uint32_t);
 void vga_printh(uint32_t);
 
+size_t strlen(const char*);
+int strncmp(const char*, const char*, size_t);
+void memset(void*, uint8_t, size_t);
+void memcpy(void*, void*, size_t);
+
+
+
 #endif // __KERNEL_H

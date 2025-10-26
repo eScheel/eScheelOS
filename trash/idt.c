@@ -22,23 +22,23 @@ struct idt_ptr
 }__attribute__((packed));
 
 extern struct idt_ptr IDT_DESC;
-struct idt_entry ientry[MAX_ENTRIES];
+struct idt_entry i_entry[MAX_ENTRIES];
 
 /* Used to set an entry in the IDT. */
 void idt_set_gate(uint8_t index, uint32_t base, uint16_t selector, uint8_t flags)
 {
-    ientry[index].base_low  = (base & 0xffff);
-    ientry[index].selector  = (selector);
-    ientry[index].zero      = (0x00);
-    ientry[index].flags     = (flags);
-    ientry[index].base_high = ((base >> 16) & 0xffff);
+    i_entry[index].base_low  = (base & 0xffff);
+    i_entry[index].selector  = (selector);
+    i_entry[index].zero      = (0x00);
+    i_entry[index].flags     = (flags);
+    i_entry[index].base_high = ((base >> 16) & 0xffff);
 }
 
 /* ... */
 void idt_init()
 {
     IDT_DESC.limit = (((sizeof(struct idt_entry) * MAX_ENTRIES)) - 1);
-    IDT_DESC.base  = (uint32_t)ientry;
+    IDT_DESC.base  = (uint32_t)&i_entry;
 
 //    memset(ientry, 0, (sizeof(struct idt_entry) * MAX_ENTRIES));
 

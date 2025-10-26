@@ -14,9 +14,7 @@ kernel:
 
 	i686-elf-gcc -c kernel/drivers/vga.c -o vga.o    -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i686-elf-gcc -c kernel/lib/string.c  -o string.o -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
-	i686-elf-gcc -c kernel/sys/mmap.c	 -o mem.o    -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
-	i686-elf-gcc -c kernel/sys/gdt.c     -o gdt.o    -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
-	i686-elf-gcc -c kernel/sys/idt.c     -o idt.o    -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
+	i686-elf-gcc -c kernel/sys/mmap.c    -o mem.o    -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 
 	i686-elf-ld *.o -T link.ld -o kernel.elf
 

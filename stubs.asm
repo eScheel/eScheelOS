@@ -311,13 +311,13 @@ LOAD_KERNEL:
 
 
 
-OUTB:
-    mov edx, [esp + 4]	; Move first argument onto the stack.
-    mov al,  [esp + 8]	; Move second argument onto the stack.
-    out dx,  al		    ; Write to the I/O port.
-    ret 	
-
-INB:
-    mov edx, [esp + 4]	; Move first argument onto the stack.
-    in  al,  dx		    ; Read from the I/O port.
-    ret
+    call gdt_init               ; Initialize the Global Descriptor table.         
+    lgdt[GDT_DESC]
+    mov ax, 0x10                ; Load our data segment selector.
+    mov ds, ax
+    mov es, ax
+    mov gs, ax
+    mov fs, ax
+    mov ss, ax
+    jmp 0x08:FLUSH             
+FLUSH:

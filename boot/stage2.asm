@@ -87,29 +87,29 @@ LOAD_KERNEL:
 ;
 ;   kernel.elf
 ;
-;   Entry point address:    0x100150
+;   Entry point address:    0x100000
 ;
 ;   Section Headers:
 ;         [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
-;         [ 1] .text             PROGBITS        00100000 001000 000844 00  AX  0   0 4096
-;         [ 2] .rodata           PROGBITS        00101000 002000 00004a 00   A  0   0 4096
+;         [ 1] .text             PROGBITS        00100000 001000 00066b 00  AX  0   0 4096
+;         [ 2] .rodata           PROGBITS        00101000 002000 000042 00   A  0   0 4096
 ;         [ 3] .data             PROGBITS        00102000 003000 000014 00  WA  0   0 4096
-;         [ 4] .bss              NOBITS          00103000 003014 004c6c 00  WA  0   0 4096
+;         [ 4] .bss              NOBITS          00103000 003014 00444c 00  WA  0   0 4096
 ;
 ;   Program Headers:
 ;       Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
-;       LOAD           0x001000 0x00100000 0x00100000 0x0104a 0x0104a R E 0x1000
-;       LOAD           0x003000 0x00102000 0x00102000 0x00014 0x05c6c RW  0x1000
+;       LOAD           0x001000 0x00100000 0x00100000 0x01042 0x01042 R E 0x1000
+;       LOAD           0x003000 0x00102000 0x00102000 0x00014 0x0544c RW  0x1000
 ;
 ;   Eventually we should maybe change this to actually parse the header in the boot loader rather than using i686-elf-readelf.
 ;   But I'm not sure we need to do that since we know our kernel and this is our bootloader. And this seems to work. So far ..
 ;
 ;   EDIT: I am finding out it is becoming very annoying to manually change the code when the kernel changes. I will need to parse elf hdr.
 ;
-kernel_entry_point equ 0x100150                    ; Address that elf_hdr + kernel_code/data will be loaded.
-text_rodata_size   equ 0x104a
+kernel_entry_point equ 0x100000                    ; Address that elf_hdr + kernel_code/data will be loaded.
+text_rodata_size   equ 0x1042
 data_section_size  equ 0x14                        ; If the FileSiz above changes, change this to it.
-bss_zero_size      equ 0x5c6c - data_section_size  ; .data(MemSiz - FileSiz) = .bss
+bss_zero_size      equ 0x544c - data_section_size  ; .data(MemSiz - FileSiz) = .bss
 ;
 PARSE_ELF_AND_RELOCATE:
     xor si, si              ; Set up destination segment:offset.
