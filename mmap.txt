@@ -3,7 +3,7 @@ eScheel OS Memory MAP:
 LOWER:
     0x1000  - 0x2FFF  : stage2.bin / bios_memory_map / stage2 stack.    (8KB)
     0x3000  - 0x3FFF  : Unused. Reserved?                               (4KB)
-    0x4000  - 0xFFFF  : kernel_addr_tmp.                                (48KB)
+    0x4000  - 0xFFFF  : kernel_addr_tmp.                      
     0x10000 - 0xFFFFF : Assume reserved for video memory and stuff. 
 
 UPPER:

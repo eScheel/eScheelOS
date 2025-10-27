@@ -61,3 +61,13 @@ size_t biggest_region_index = 0;
     vga_prints(" regions and the biggest region being \0");
     vga_printd(biggest_region_index);
     vga_printc('\n');
+
+
+
+
+
+
+
+
+        uint64_t base   = ((uint64_t)entry->base_addr_high << 32) | entry->base_addr_low;
+        uint64_t length = ((uint64_t)entry->length_high << 32)    | entry->length_low;

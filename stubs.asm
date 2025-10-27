@@ -321,3 +321,75 @@ LOAD_KERNEL:
     mov ss, ax
     jmp 0x08:FLUSH             
 FLUSH:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    push dword str_total_mem            ; Display total available memory in MB.
+    call vga_prints                     ; TODO: Maybe eventually test to make sure that at least 2MB are available.
+    xor  edx, edx
+    mov  eax, dword [available_memory_size]
+    mov  ecx, 1048576   ; Divide by 1024*1024 to get MB value.
+    div  ecx                
+    push dword eax
+    call vga_printd
+    push dword str_megabytes
+    call vga_prints
+
+    push dword [mmap_avail_entry_count]
+    call vga_printd
+    push byte 0xa
+    call vga_printc
+
+
+    xor ecx, ecx
+    lea edi, [available_memory_map]
+.LOOP:
+    push ecx
+
+    add  edi, 4
+    push dword [es:edi]
+    call vga_printh
+
+    sub  edi, 4
+    push dword [es:edi]
+    call vga_printh
+
+    push byte ':'
+    call vga_printc
+
+    add  edi, 12
+    push dword [es:edi]
+    call vga_printh
+
+    sub  edi, 4
+    push dword [es:edi]
+    call vga_printh
+
+    add edi, 8
+    push byte 0xa
+    call vga_printc
+
+    add  esp, 24   ; CDECL: Clean up all 24 bytes from C calls at once.
+
+    pop  ecx
+    inc  ecx
+    cmp  ecx, dword [mmap_avail_entry_count]
+    jl  .LOOP

@@ -106,9 +106,9 @@ LOAD_KERNEL:
 ;
 ;   EDIT: I am finding out it is becoming very annoying to manually change the code when the kernel changes. I will need to parse elf hdr.
 ;
-kernel_entry_point equ 0x100000                    ; Address that elf_hdr + kernel_code/data will be loaded.
-text_rodata_size   equ 0x1042
-data_section_size  equ 0x14                        ; If the FileSiz above changes, change this to it.
+kernel_entry_point equ 0x100020                    ; Address that elf_hdr + kernel_code/data will be loaded.
+text_rodata_size   equ 0x106a
+data_section_size  equ 0x28                        ; If the FileSiz above changes, change this to it.
 bss_zero_size      equ 0x544c - data_section_size  ; .data(MemSiz - FileSiz) = .bss
 ;
 PARSE_ELF_AND_RELOCATE:
@@ -357,7 +357,7 @@ struc SMAP_entry
     .type:      resd 1  ; Type of memory region (32-bit)
     .acpi:      resd 1  ; ACPI 3.0 Extended Attributes
 endstruc
-; We'll allocate space for up to 16 entries for now.
+; We'll allocate space for up to 32 entries for now.
 SMAP_entry_max equ 32
 
 ; A structure to hold the entire memory map, which will be passed to the kernel.

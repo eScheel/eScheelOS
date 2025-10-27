@@ -11,8 +11,10 @@ struct SMAP_entry {
 }__attribute__((packed));
 
 typedef struct {
-    uint64_t base;
-    uint64_t length;
+    uint32_t base_low;
+    uint32_t base_high;
+    uint32_t length_low;
+    uint32_t length_high;
 }memory_region_t;
 
 size_t mmap_avail_entry_count = 0;
@@ -25,7 +27,7 @@ void memory_map_init(uint16_t* mmap_desc_addr)
 {
     size_t num_entries = (uint16_t)mmap_desc_addr[0];
 
-    // ...
+    // Initialize the entry_array structure with the address of memory map form bios + size. 
     struct SMAP_entry* entry_array = (struct SMAP_entry*)(mmap_desc_addr + 2);
     for(size_t i=0; i<num_entries; i++)
     {
@@ -34,24 +36,38 @@ void memory_map_init(uint16_t* mmap_desc_addr)
         // If it's not available, let's just skip it.
         if(entry->type != 0x01) { continue; }
 
-        uint64_t base   = ((uint64_t)entry->base_addr_high << 32) | entry->base_addr_low;
-        uint64_t length = ((uint64_t)entry->length_high << 32)    | entry->length_low;
-
+        // ...
         if(mmap_avail_entry_count < SMAP_entry_max)
         {
-            memory_map[mmap_avail_entry_count].base = base;
-            memory_map[mmap_avail_entry_count].length = length;
+            // Let's fill in our global variable that kernel will use.
+            memory_map[mmap_avail_entry_count].base_low = entry->base_addr_low;
+            memory_map[mmap_avail_entry_count].base_high = entry->base_addr_high;
+            memory_map[mmap_avail_entry_count].length_low = entry->length_low;
+            memory_map[mmap_avail_entry_count].length_high = entry->length_high;
             mmap_avail_entry_count += 1;          
         }
-        
     }
 
-    // Let's fill in our structure of available memory region addr and size.
+    // Loop through available memory regions.
     for(size_t i=0; i<mmap_avail_entry_count; i++)
     {
+        // Let's fill in our global structure of available memory region addr and size.
         available_memory_map[i] = memory_map[i];
-        available_memory_size += available_memory_map[i].length;
+        available_memory_size  += (available_memory_map[i].length_low \
+                               +   available_memory_map[i].length_high);
+
+        // Now let's display available memory regions.
+        memory_region_t mmap_region = available_memory_map[i];
+        vga_printh(mmap_region.base_high);
+        vga_printh(mmap_region.base_low);
+        vga_prints(" : ");
+        vga_printh(mmap_region.length_high);
+        vga_printh(mmap_region.length_low);
+        vga_printc('\n');
     }
+    vga_prints("Total Memory: ");
+    vga_printd(available_memory_size/(1024 * 1024));
+    vga_prints("MB\n");
 
     return;
 }

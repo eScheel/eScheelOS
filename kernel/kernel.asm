@@ -19,6 +19,7 @@ section .text
 global INIT
 global OUTB
 global INB
+
 extern vga_init
 extern memory_map_init
 
@@ -29,8 +30,11 @@ extern vga_printh
 extern vga_printd
 
 extern memory_map
-extern available_memory_size
 extern available_memory_map
+extern available_memory_size
+extern mmap_avail_entry_count
+
+extern GDT_REINIT
 
 ;=============================================================================================
 
@@ -38,27 +42,24 @@ INIT:
     mov ebp, stack_top          ; Stack is located at the top of BSS and grows downward.
     mov esp, ebp
 
-    mov [boot_drive], dl
+    mov [boot_drive], dl        ; Save some values passed from boot.bin and stage2.bin
     mov [video_mode], al
     mov [mmap_desc_addr], bx
 
-    call vga_init                       ; Initialize graphics.
+    call vga_init                       ; Initialize graphics array.
     push dword str_os_name
     call vga_prints
-    xor  ebx, ebx                       ; Parse and take control of the memory map passed by BIOS.
+
+    push dword str_mmap_init            ; Parse and take control of the memory map passed by BIOS.
+    call vga_prints
+    xor  ebx, ebx
     mov  bx, word [mmap_desc_addr] 
     push ebx
     call memory_map_init
-    push dword str_total_mem            ; Display total available memory.
-    call vga_prints
-    xor  edx, edx                             
-    mov  eax, dword [available_memory_size]
-    mov  ecx, 1048576                   ; Divide by 1024*1024 to get MB value.
-    div  ecx                
-    push dword eax
-    call vga_printd
-    push dword str_megabytes
-    call vga_prints
+
+    call GDT_REINIT                     ; Initialize the Global Descriptor Table.
+
+    ; TODO: IDT
 
 HALT:
     push dword str_halted
@@ -84,10 +85,9 @@ INB:
 ;=============================================================================================
 section .rodata
 
-str_halted:    db "System Halted ...",0
 str_os_name:   db "eScheel OS",0xa,0
-str_total_mem: db "Total Memory: ",0
-str_megabytes: db "MB",10,0
+str_mmap_init: db "Initializing System Memory Map ...",0xa,0
+str_halted:    db "System Halted ...",0
 
 ;=============================================================================================
 section .data
