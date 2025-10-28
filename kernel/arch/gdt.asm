@@ -1,21 +1,24 @@
 
+;=============================================================================================
 section .text
 
 global GDT_REINIT
 
 GDT_REINIT:
     lgdt[GDT_DESC]
-    mov ax, 0x10                ; Load our data segment selector.
+    mov ax, DATA_SEG               ; Load our data segment selector.
     mov ds, ax
     mov es, ax
     mov gs, ax
     mov fs, ax
-    mov ss, ax
-    jmp 0x08:.FLUSH             
+    mov ss, ax                     ; I'm really not sure if this is a good idea or how I should properly set ss.
+    jmp CODE_SEG:.FLUSH            ; Far jump to flush the GDT.     
 .FLUSH:
-    ret
+    ret                            ; Return to Kinit.
 
+;=============================================================================================
 section .data
+
 GDT_ENTRY:
     GDT_NULL:
         dw 0x0000   ; Limit (bits 0-15)

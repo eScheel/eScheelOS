@@ -12,6 +12,7 @@ boot:
 kernel:
 	nasm kernel/kernel.asm   -f elf32 -o kernel.o
 	nasm kernel/arch/gdt.asm -f elf32 -o gdt.o
+	nasm kernel/arch/idt.asm -f elf32 -o idt.o
 
 	i686-elf-gcc -c kernel/drivers/vga.c -o vga.o    -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i686-elf-gcc -c kernel/lib/string.c  -o string.o -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra

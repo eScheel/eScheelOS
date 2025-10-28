@@ -20,6 +20,8 @@ global INIT
 global OUTB
 global INB
 
+extern GDT_REINIT
+
 extern vga_init
 extern memory_map_init
 
@@ -34,8 +36,6 @@ extern available_memory_map
 extern available_memory_size
 extern mmap_avail_entry_count
 
-extern GDT_REINIT
-
 ;=============================================================================================
 
 INIT:
@@ -45,6 +45,8 @@ INIT:
     mov [boot_drive], dl        ; Save some values passed from boot.bin and stage2.bin
     mov [video_mode], al
     mov [mmap_desc_addr], bx
+
+    call GDT_REINIT             ; Reinitialize the Global Descriptor Table.
 
     call vga_init                       ; Initialize graphics array.
     push dword str_os_name
@@ -56,8 +58,6 @@ INIT:
     mov  bx, word [mmap_desc_addr] 
     push ebx
     call memory_map_init
-
-    call GDT_REINIT                     ; Initialize the Global Descriptor Table.
 
     ; TODO: IDT
 

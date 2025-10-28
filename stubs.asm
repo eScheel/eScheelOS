@@ -311,27 +311,6 @@ LOAD_KERNEL:
 
 
 
-    call gdt_init               ; Initialize the Global Descriptor table.         
-    lgdt[GDT_DESC]
-    mov ax, 0x10                ; Load our data segment selector.
-    mov ds, ax
-    mov es, ax
-    mov gs, ax
-    mov fs, ax
-    mov ss, ax
-    jmp 0x08:FLUSH             
-FLUSH:
-
-
-
-
-
-
-
-
-
-
-
 
 
 
