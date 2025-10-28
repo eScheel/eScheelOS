@@ -5,11 +5,9 @@
 ;   Author: Jacob Scheel
 ;
 ;   This code will do the following:
-;       1) Store the boot drive number and the current video mode passed by stage2
-;       2) Setup the stack and initialize our own GDT.
-;       3) Continue to setup the IDT, PAGING, etc...
-;
-;   This is the main kernel file.
+;       1) Setup the stack and store the boot drive number and the current video mode passed by stage2. 
+;       2) Reinitialize our own GDT, VGA, System Memory Map, and IDT / ISRs / IRQs.
+;       3) Initialize Paging and then call kernel_main to take control.
 ;
 [bits 32]
 
@@ -23,14 +21,13 @@ global INB
 extern GDT_REINIT
 
 extern vga_init
-extern memory_map_init
-
 extern vga_putc
 extern vga_printc
 extern vga_prints
 extern vga_printh
 extern vga_printd
 
+extern memory_map_init
 extern memory_map
 extern available_memory_map
 extern available_memory_size
@@ -46,9 +43,9 @@ INIT:
     mov [video_mode], al
     mov [mmap_desc_addr], bx
 
-    call GDT_REINIT             ; Reinitialize the Global Descriptor Table.
+    call GDT_REINIT                     ; Reinitialize the Global Descriptor Table.
 
-    call vga_init                       ; Initialize graphics array.
+    call vga_init                       ; Initialize graphics array and print for success.
     push dword str_os_name
     call vga_prints
 
@@ -57,7 +54,7 @@ INIT:
     xor  ebx, ebx
     mov  bx, word [mmap_desc_addr] 
     push ebx
-    call memory_map_init
+    call memory_map_init                ; This will print some useful values to the screen.
 
     ; TODO: IDT
 
