@@ -106,9 +106,9 @@ LOAD_KERNEL:
 ;
 ;   EDIT: I am finding out it is becoming very annoying to manually change the code when the kernel changes. I will need to parse elf hdr.
 ;
-kernel_entry_point equ 0x100020                    ; Address that elf_hdr + kernel_code/data will be loaded.
-text_rodata_size   equ 0x106a
-data_section_size  equ 0x28                        ; If the FileSiz above changes, change this to it.
+kernel_entry_point equ 0x1000e0                    ; Address that elf_hdr + kernel_code/data will be loaded.
+text_rodata_size   equ 0x1092
+data_section_size  equ 0x830                       ; If the FileSiz above changes, change this to it.
 bss_zero_size      equ 0x544c - data_section_size  ; .data(MemSiz - FileSiz) = .bss
 ;
 PARSE_ELF_AND_RELOCATE:
@@ -261,7 +261,7 @@ BIOS_ENABLE_A20:
     out  0x64, al
     call KB_CONTROLLER_WAIT
     pop  ax                         ; Get the original value back
-    or   al, 2                      ; Set bit 1 (the A20 gate enable bit)
+    or   al, 0x02                   ; Set bit 1 (the A20 gate enable bit)
     out  0x60, al                   ; Write the new value back
     call KB_CONTROLLER_WAIT
     mov  al, 0xae                   ; Command to enable the keyboard
@@ -316,8 +316,8 @@ BIOS_MEMORY_MAP:
 .LOOP:
     mov eax, 0xE820                         ; E820 function number.
     mov edx, 0x534D4150                     ; Magic number 'SMAP'
-    mov ecx, SMAP_entry_size                ; Request 24 bytes for ACPI 3.0 compatibility.
-    mov dword [es:di + SMAP_entry.acpi], 1  ; ACPI 3.0: ask for extended attributes.
+    mov ecx, SMAP_ENTRY_size                ; Request 24 bytes for ACPI 3.0 compatibility.
+    mov dword [es:di + SMAP_ENTRY.acpi], 1  ; ACPI 3.0: ask for extended attributes.
     int 0x15                                ; Call BIOS interrupt.
     jc .ERROR                               ; If carry is set, there's an error.
     ; BIOS may trash EDX, so we restore it for the signature check.
@@ -327,17 +327,17 @@ BIOS_MEMORY_MAP:
     ; If EBX is 0 after the first successful call, it means the list might be empty or just one entry.
     ; The loop condition `test ebx, ebx` will handle this.
     ; Now Validate the returned entry and skip entries with a length of 0.
-    mov ecx, [es:di + SMAP_entry.length]
-    or  ecx, [es:di + SMAP_entry.length + 4] ; Check if the 64-bit length is zero
+    mov ecx, [es:di + SMAP_ENTRY.length]
+    or  ecx, [es:di + SMAP_ENTRY.length + 4] ; Check if the 64-bit length is zero
     jz .SKIPENT
     ; Check ACPI 3.0 "ignore this entry" bit if we got a 24-byte response.
     cmp  cl, 20
     jbe .NOTACPI3
-    test byte [es:di + SMAP_entry.acpi], 1
+    test byte [es:di + SMAP_ENTRY.acpi], 1
     je  .SKIPENT
 .NOTACPI3:
     inc bp                  ; Increment valid entry count
-    add di, SMAP_entry_size ; Move to the next storage spot
+    add di, SMAP_ENTRY_size ; Move to the next storage spot
 .SKIPENT:
     test ebx, ebx           ; If EBX is 0, we are at the end of the list.
     jnz .LOOP               ; If not zero, continue to get the next entry.
@@ -351,19 +351,19 @@ BIOS_MEMORY_MAP:
 ;=============================================================================================
 
 ; A structure for a single E820 memory map entry (24 bytes).
-struc SMAP_entry
+struc SMAP_ENTRY
     .base_addr: resq 1  ; Base Address (64-bit)
     .length:    resq 1  ; Length (64-bit)
     .type:      resd 1  ; Type of memory region (32-bit)
     .acpi:      resd 1  ; ACPI 3.0 Extended Attributes
 endstruc
 ; We'll allocate space for up to 32 entries for now.
-SMAP_entry_max equ 32
+SMAP_ENTRY_max equ 32
 
 ; A structure to hold the entire memory map, which will be passed to the kernel.
 MMAP_DESC:
     dd 0                                               ; Number of valid entries we found
-    times (SMAP_entry_max * SMAP_entry_size)  db 0     ; Array of entries
+    times (SMAP_ENTRY_max * SMAP_ENTRY_size)  db 0     ; Array of entries
 
 ;=============================================================================================
 

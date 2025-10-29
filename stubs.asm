@@ -372,3 +372,92 @@ LOAD_KERNEL:
     inc  ecx
     cmp  ecx, dword [mmap_avail_entry_count]
     jl  .LOOP
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    ;=============================================================================================
+section .text
+
+global IDT_INIT
+
+IDT_INIT:
+    lidt[IDT_DESC]
+    ret
+
+;=============================================================================================
+section .data
+
+struc IDT_ENTRY
+    .offset_low:  resw 1
+    .selector:    resw 1
+    .zero:        resb 1
+    .type:        resb 1
+    .offset_high: resw 1
+endstruc
+; Intel has a max of 256 entries.
+IDT_ENTRY_max equ   256
+
+IDT_PTR:
+    times (IDT_ENTRY_max * IDT_ENTRY_size) db 0
+
+IDT_DESC:
+    dw  (IDT_ENTRY_max * IDT_ENTRY_size) - 1
+    dd  IDT_PTR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;
+;		     PIC1	PIC2
+;	Command  0x20	0xA0
+;	Data	 0x21	0xA1
+REMAP_PICS:
+    mov al, 0x11
+    out 0x20, al      ; ICW1 - begin initialization
+    out 0xa0, al
+
+    mov al, 0x20
+    out 0x21, al      ; ICW2 - remap offset address of IDT
+    mov al, 0x28
+    out 0xa1, al
+
+    mov al, 0x00
+    out 0x21, al      ; ICW3 - setup cascading
+    out 0xa1, al      ; For now we won't use cascading.
+
+    mov al, 0x01
+    out 0x21, al      ; ICW4 - environment info
+    out 0xa1, al
+
+    mov al, 0xff
+    out 0x21, al      ; Mask Interrupts, 0 = active. 1 = unactive.
+    out 0xa1, al      ; For now let's mask them all.
+
+    ret

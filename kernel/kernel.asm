@@ -33,6 +33,9 @@ extern available_memory_map
 extern available_memory_size
 extern mmap_avail_entry_count
 
+extern REMAP_PICS
+extern IDT_INIT
+
 ;=============================================================================================
 
 INIT:
@@ -56,7 +59,12 @@ INIT:
     push ebx
     call memory_map_init                ; This will print some useful values to the screen.
 
-    ; TODO: IDT
+    call REMAP_PICS                     ; Initialize interrupts and service routines.
+    call IDT_INIT
+    sti
+
+.LOOP:
+    jmp .LOOP
 
 HALT:
     push dword str_halted

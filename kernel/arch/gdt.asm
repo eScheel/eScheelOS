@@ -3,6 +3,7 @@
 section .text
 
 global GDT_REINIT
+global CODE_SEG
 
 GDT_REINIT:
     lgdt[GDT_DESC]
