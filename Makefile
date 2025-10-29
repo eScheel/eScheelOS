@@ -15,6 +15,7 @@ kernel:
 	nasm kernel/arch/idt.asm -f elf32 -o idt.o
 	nasm kernel/arch/isr.asm -f elf32 -o isr.o
 	nasm kernel/arch/irq.asm -f elf32 -o irq.o
+	nasm kernel/sys/io.asm   -f elf32 -o io.o
 
 	i686-elf-gcc -c kernel/drivers/vga.c -o vga.o    -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i686-elf-gcc -c kernel/lib/string.c  -o string.o -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra

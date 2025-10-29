@@ -461,3 +461,29 @@ REMAP_PICS:
     out 0xa1, al      ; For now let's mask them all.
 
     ret
+
+
+
+
+
+
+
+
+.LOOP:
+    dec  ecx                ; This value (255, 254, ... 0) will be our interrupt number.
+    
+    ; Prepare to call IDT_SET_GATE(interrupt_number, handler_address)
+    ; The cdecl calling convention pushes arguments onto the stack from right to left.
+    push ecx                ; Push the first argument (interrupt_number), which is our counter (ECX).
+    push eax                ; Push the second argument (handler_address), which is in EAX.
+    call IDT_SET_GATE
+    
+    ; --- Clean up the stack after the call ---
+    ; We pushed EAX and ECX (8 bytes total), but IDT_SET_GATE
+    ; doesn't clean up its own stack arguments (per cdecl).
+    ; We can't just use `add esp, 8` here because we need the values
+    ; back in their registers for the loop.
+    pop  eax                ; Restore the handler address to EAX for the next loop iteration.
+    pop  ecx                ; Restore the counter to ECX.
+    test ecx, ecx           ; Check if ECX is zero.
+    jnz .LOOP

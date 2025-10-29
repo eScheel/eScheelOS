@@ -56,6 +56,33 @@ static void vga_update_cursor()
 }
 
 /* ... */
+static void vga_scroll()
+{
+	size_t i;
+	uint16_t blank = (uint16_t)' ' | (uint16_t)(vga.color << 8);
+
+	// Move all rows up by one.
+	// We loop 24 times (VGA_HEIGHT - 1).
+	for (i = 0; i < (VGA_HEIGHT - 1) * VGA_WIDTH; i++)
+	{
+		// terminal_buffer[i] = the cell on the current row
+		// terminal_buffer[i + VGA_WIDTH] = the cell on the *next* row
+		terminal_buffer[i] = terminal_buffer[i + VGA_WIDTH];
+	}
+
+	// Clear the last row.
+	// 'i' is already at the start of the last row: (VGA_HEIGHT - 1) * VGA_WIDTH
+	for ( ; i < VGA_HEIGHT * VGA_WIDTH; i++)
+	{
+		terminal_buffer[i] = blank;
+	}
+
+	// Reset the vga cursor state to the beginning of the last line.
+	vga.column = VGA_HEIGHT - 1;
+	vga.row = 0;
+}
+
+/* ... */
 void vga_putc(char c, size_t x, size_t y)
 {
 	uint16_t index = y * VGA_WIDTH + x;
@@ -81,11 +108,11 @@ void vga_printc(char c)
 		vga.column += 1;
 		if(vga.column == VGA_HEIGHT)
         {
-			vga.column = 0;
+			vga_scroll();
+			goto end_vga_printc;
         }
 
 		vga.row = 0;
-
 		goto end_vga_printc;
 	}
 
@@ -105,7 +132,7 @@ void vga_printc(char c)
 		vga.column += 1;
 		if(vga.column == VGA_HEIGHT)
         {
-			vga.column = 0;		// TODO: Handle scrolling.
+			vga_scroll();
         }
 	}
 

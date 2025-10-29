@@ -1,13 +1,13 @@
 ;=============================================================================================
 section .text
 
-global isr_stub         ;; --- NEW ---
+global ISR_STUB
 
-extern vga_prints       ;; --- NEW ---
+extern vga_prints
 
 ;; --- NEW ---
-;; isr_stub: Our generic, "catch-all" interrupt handler
-isr_stub:
+;; isr_stub: Our generic, "catch-all" isr handler
+ISR_STUB:
     pusha                   ; Save all general-purpose registers (eax, ecx, etc.)
 
     push dword str_unhandled
@@ -23,7 +23,6 @@ isr_stub:
 
     popa                    ; Restore all registers
     iret                    ; Return from interrupt
-;; --- NEW ---
 
 ;=============================================================================================
 section .rodata           ;; --- NEW ---

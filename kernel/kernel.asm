@@ -15,8 +15,6 @@
 section .text
 
 global INIT
-global OUTB
-global INB
 
 extern GDT_REINIT
 
@@ -75,19 +73,6 @@ HALT:
     jmp  .LOOP      ; Just incase a nmi hits.
 
 ;=============================================================================================
-
-OUTB:
-    mov edx, [esp + 4]	; Move first argument onto the stack.
-    mov al,  [esp + 8]	; Move second argument onto the stack.
-    out dx,  al		    ; Write to the I/O port.
-    ret 	
-
-INB:
-    mov edx, [esp + 4]	; Move first argument onto the stack.
-    in  al,  dx		    ; Read from the I/O port.
-    ret
-
-;=============================================================================================
 section .rodata
 
 str_os_name:   db "eScheel OS",0xa,0
@@ -99,7 +84,6 @@ section .data
 
 boot_drive: db 0
 video_mode: db 0
-
 mmap_desc_addr: dw 0
 
 ;=============================================================================================
