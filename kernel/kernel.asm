@@ -14,7 +14,7 @@
 ;=============================================================================================
 section .text
 
-global INIT
+global KERNEL_INIT
 
 extern GDT_REINIT
 
@@ -34,9 +34,11 @@ extern mmap_avail_entry_count
 extern REMAP_PICS
 extern IDT_INIT
 
+extern kernel_main
+
 ;=============================================================================================
 
-INIT:
+KERNEL_INIT:
     mov ebp, stack_top          ; Stack is located at the top of BSS and grows downward.
     mov esp, ebp
 
@@ -59,10 +61,13 @@ INIT:
 
     call REMAP_PICS                     ; Initialize interrupts and service routines.
     call IDT_INIT
-    sti
+    
+    ;TODO: PAGING. 
 
-.LOOP:
-    jmp .LOOP
+    xor  eax, eax
+    mov  al, byte [boot_drive]
+    push eax
+    call kernel_main                    ; kernel_main will enable interrupts. asm volatile("sti"); Hope not bad idea..
 
 HALT:
     push dword str_halted

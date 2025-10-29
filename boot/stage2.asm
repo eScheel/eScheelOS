@@ -107,7 +107,7 @@ LOAD_KERNEL:
 ;   EDIT: I am finding out it is becoming very annoying to manually change the code when the kernel changes. I will need to parse elf hdr.
 ;
 kernel_entry_point equ 0x1000f0                    ; Address that elf_hdr + kernel_code/data will be loaded.
-text_rodata_size   equ 0x1092
+text_rodata_size   equ 0x109f
 data_section_size  equ 0x830                       ; If the FileSiz above changes, change this to it.
 bss_zero_size      equ 0x544c - data_section_size  ; .data(MemSiz - FileSiz) = .bss
 ;

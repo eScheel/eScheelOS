@@ -47,8 +47,8 @@ REMAP_PICS:
     ret
 
 
-;; irq1_handler: This is the handler for IRQ 1 (keyboard)
-;; After remapping, it's at IDT entry 33 (0x21)
+; This is the handler for IRQ 1 (keyboard)
+; After remapping, it's at IDT entry 33 (0x21)
 IRQ1_HANDLER:
     pusha                   ; Save all general-purpose registers
 
