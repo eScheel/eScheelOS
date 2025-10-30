@@ -487,3 +487,20 @@ REMAP_PICS:
     pop  ecx                ; Restore the counter to ECX.
     test ecx, ecx           ; Check if ECX is zero.
     jnz .LOOP
+
+
+
+
+
+
+
+
+
+
+SYSTEM_HALT:
+    push dword str_halted
+    call vga_prints
+    cli
+.LOOP:    
+    hlt
+    jmp  .LOOP      ; Just incase a nmi hits.

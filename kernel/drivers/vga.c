@@ -1,7 +1,5 @@
 #include <kernel.h>
 
-extern void OUTB(uint16_t, uint8_t);
-
 #define VGA_WIDTH  80
 #define VGA_HEIGHT 25
 #define VGA_MEMORY 0xB8000

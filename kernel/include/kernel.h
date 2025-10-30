@@ -16,6 +16,7 @@ int strncmp(const char*, const char*, size_t);
 void memset(void*, uint8_t, size_t);
 void memcpy(void*, void*, size_t);
 
-
+extern uint8_t INB(uint8_t);
+extern void   OUTB(uint16_t, uint8_t);
 
 #endif // __KERNEL_H

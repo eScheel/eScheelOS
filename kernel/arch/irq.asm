@@ -4,10 +4,7 @@ section .text
 global REMAP_PICS
 global IRQ1_HANDLER
 
-extern INB 
-extern OUTB
-
-extern vga_prints
+extern keyboard_interrupt_handler
 
 ;
 ;		     PIC1	PIC2
@@ -50,28 +47,9 @@ REMAP_PICS:
 ; This is the handler for IRQ 1 (keyboard)
 ; After remapping, it's at IDT entry 33 (0x21)
 IRQ1_HANDLER:
-    pusha                   ; Save all general-purpose registers
-
-    ; We *must* read from the keyboard's data port (0x60)
-    ; to acknowledge the interrupt, otherwise it will keep firing.
-    in al, 0x60
-    
-    ; We don't do anything with the scancode yet, just print a message
-    push dword str_key_press
-    call vga_prints
-    add esp, 4
-
-    ; CRITICAL: We *must* send an End of Interrupt (EOI) signal
-    ; to the PIC chip, or it won't send any more interrupts.
-    ; Since this was from PIC1 (master), we only send to 0x20.
-    mov al, 0x20
+    pusha                               ; Save all general-purpose registers
+    call keyboard_interrupt_handler 
+    mov al, 0x20                        ; ACK PIC1 for the interrupt to stop firing.
     out 0x20, al
-
-    popa                    ; Restore all registers
-    iret                    ; Return from interrupt
-
-
-;=============================================================================================
-section .rodata
-
-str_key_press: db "Key Pressed!", 0xa, 0
+    popa                                ; Restore all registers
+    iret                                ; Return from interrupt

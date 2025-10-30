@@ -57,7 +57,13 @@ ENTRY:
     mov eax, cr0        ; Set the PE flag in cr0.
     or  eax, 1          ; We only need to change the bottom bit.
     mov cr0, eax
-    jmp CODE_SEG:BOOTSTRAP32
+    mov ax, DATA_SEG    ; Load our data segment selector.
+    mov ds, ax
+    mov es, ax
+    mov gs, ax
+    mov fs, ax
+    mov ss, ax
+    jmp CODE_SEG:BITS32
 
 ;=============================================================================================
 
@@ -87,28 +93,26 @@ LOAD_KERNEL:
 ;
 ;   kernel.elf
 ;
-;   Entry point address:    0x100000
-;
 ;   Section Headers:
 ;         [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
-;         [ 1] .text             PROGBITS        00100000 001000 00066b 00  AX  0   0 4096
-;         [ 2] .rodata           PROGBITS        00101000 002000 000042 00   A  0   0 4096
-;         [ 3] .data             PROGBITS        00102000 003000 000014 00  WA  0   0 4096
-;         [ 4] .bss              NOBITS          00103000 003014 00444c 00  WA  0   0 4096
+;         [ 1] .text             PROGBITS        00100000 001000 0008f1 00  AX  0   0 4096
+;         [ 2] .rodata           PROGBITS        00101000 002000 00008f 00   A  0   0 4096
+;         [ 3] .data             PROGBITS        00102000 003000 000830 00  WA  0   0 4096
+;         [ 4] .bss              NOBITS          00103000 003830 00444c 00  WA  0   0 4096
 ;
 ;   Program Headers:
 ;       Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
-;       LOAD           0x001000 0x00100000 0x00100000 0x01042 0x01042 R E 0x1000
-;       LOAD           0x003000 0x00102000 0x00102000 0x00014 0x0544c RW  0x1000
+;       LOAD           0x001000 0x00100000 0x00100000 0x0108f 0x0108f R E 0x1000
+;       LOAD           0x003000 0x00102000 0x00102000 0x00830 0x0544c RW  0x1000
 ;
 ;   Eventually we should maybe change this to actually parse the header in the boot loader rather than using i686-elf-readelf.
 ;   But I'm not sure we need to do that since we know our kernel and this is our bootloader. And this seems to work. So far ..
 ;
 ;   EDIT: I am finding out it is becoming very annoying to manually change the code when the kernel changes. I will need to parse elf hdr.
 ;
-kernel_entry_point equ 0x1000f0                    ; Address that elf_hdr + kernel_code/data will be loaded.
-text_rodata_size   equ 0x109f
-data_section_size  equ 0x830                       ; If the FileSiz above changes, change this to it.
+kernel_entry_point: dd 0                           ; Entry point address defined in the elf header.
+text_rodata_size   equ 0x108f
+data_section_size  equ 0x884                       ; If the FileSiz above changes, change this to it.
 bss_zero_size      equ 0x544c - data_section_size  ; .data(MemSiz - FileSiz) = .bss
 ;
 PARSE_ELF_AND_RELOCATE:
@@ -116,8 +120,9 @@ PARSE_ELF_AND_RELOCATE:
     mov gs, si
     mov si, kernel_addr_tmp ; 4000h is where the LOAD_KERNEL routine loaded the kernel.
 
-    call ENSURE_ELF         ; Let's at least make sure it is an ELF file.
-    add si, 0x1000          ; We know that our section .text starts at. + 0x1000 after elf header.
+    call ENSURE_ELF         ; Let's make sure it is an ELF file.
+    call GET_ELF_ENTRY      ; Let's parse the entry point address.
+    add si, 0x1000          ; Skip past the elf header.
 
     mov di, 0xfA00          ; Set up destination segment:offset.
     mov fs, di
@@ -139,7 +144,7 @@ PARSE_ELF_AND_RELOCATE:
     xor cx, cx
 .LOOP2:
     mov al, byte [gs:si]
-    mov byte [fs:di], al    ; Move whats at section .text into 0x100000
+    mov byte [fs:di], al    ; Move whats at section .data into 0x102000
     inc di
     inc si                  ; TODO: Change this to use the rep instruction.
     inc cx
@@ -157,6 +162,8 @@ PARSE_ELF_AND_RELOCATE:
     jl .LOOP3
 
     ret
+
+;=============================================================================================
 
 ENSURE_ELF:
     pusha
@@ -177,6 +184,34 @@ ENSURE_ELF:
     jne ELF_PARSE_FAILED
     popa
     ret
+
+GET_ELF_ENTRY:
+    pusha
+    mov bx, word [gs:si + ELF32_HDR.e_entry]
+    mov dx, word [gs:si + ELF32_HDR.e_entry + 2]
+    mov [kernel_entry_point], bx
+    mov [kernel_entry_point + 2], dx
+    popa
+    ret
+
+;=============================================================================================
+
+struc ELF32_HDR
+	.e_ident:     resb 16     ;	/* File identification. */
+	.e_type:      resw 1      ;		/* File type. */
+	.e_machine:   resw 1      ;	/* Machine architecture. */
+	.e_version:   resd 1      ;	/* ELF format version. */
+	.e_entry:     resd 1      ;	/* Entry point. */
+	.e_phoff:     resd 1      ;	/* Program header file offset. */
+	.e_shoff:     resd 1      ;	/* Section header file offset. */
+	.e_flags:     resd 1      ;	/* Architecture-specific flags. */
+	.e_ehsize:    resw 1      ;	/* Size of ELF header in bytes. */
+	.e_phentsize: resw 1      ;	/* Size of program header entry. */
+	.e_phnum:     resw 1      ;	/* Number of program header entries. */
+	.e_shentsize: resw 1      ;	/* Size of section header entry. */
+	.e_shnum:     resw 1      ;	/* Number of section header entries. */
+	.e_shstrndx:  resw 1      ;	/* Section name strings section. */
+endstruc
 
 ;=============================================================================================
 
@@ -402,18 +437,13 @@ GDT_DESC:
 
 [bits 32]
 
-BOOTSTRAP32:
-    mov ax, DATA_SEG        ; Load our data segment selector.
-    mov ds, ax
-    mov es, ax
-    mov gs, ax
-    mov fs, ax
-    mov ss, ax
-
+BITS32:
     ; Pass boot drive and default video mode to kernel.
     mov dl, [boot_drive]      ; Pass boot drive to kernel.
-    mov al, [video_mode]      ; Pass default video mode to kernel.
+    mov cl, [video_mode]      ; Pass default video mode to kernel.
     mov bx,  MMAP_DESC        ; Pass memory map buffer address to kernel.
+
+    mov eax, [kernel_entry_point]
     
     ; ...
-    jmp CODE_SEG:kernel_entry_point 
+    jmp EAX
