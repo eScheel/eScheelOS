@@ -36,6 +36,8 @@ extern IDT_INIT
 
 extern kernel_main
 
+global SYSTEM_HALT
+
 ;=============================================================================================
 
 KERNEL_INIT:

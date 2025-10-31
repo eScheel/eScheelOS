@@ -112,8 +112,8 @@ LOAD_KERNEL:
 ;
 kernel_entry_point: dd 0                           ; Entry point address defined in the elf header.
 text_rodata_size   equ 0x108f
-data_section_size  equ 0x884                       ; If the FileSiz above changes, change this to it.
-bss_zero_size      equ 0x544c - data_section_size  ; .data(MemSiz - FileSiz) = .bss
+data_section_size  equ 0x8fc                       ; If the FileSiz above changes, change this to it.
+bss_zero_size      equ 0x546c - data_section_size  ; .data(MemSiz - FileSiz) = .bss
 ;
 PARSE_ELF_AND_RELOCATE:
     xor si, si              ; Set up destination segment:offset.
@@ -126,8 +126,9 @@ PARSE_ELF_AND_RELOCATE:
 
     mov di, 0xfA00          ; Set up destination segment:offset.
     mov fs, di
-    mov di, 0x6000          ; We are putting our kernel at 0x100000
+    mov di, 0x6000          ; We are putting our kernel at 0x100000 or FA00:6000
 
+    ; Initialize first program header.
     xor cx, cx
 .LOOP1:
     mov al, byte [gs:si]
@@ -138,9 +139,10 @@ PARSE_ELF_AND_RELOCATE:
     cmp cx, text_rodata_size
     jl .LOOP1
 
-    mov si, 0x7000          ; This should be where our section .data starts after .text and .rodata. 0x4000 + 0x1000 + 0x2000
+    mov si, 0x7000          ; This should be where our section .data starts after .text and .rodata.
     mov di, 0x8000          ; This should be where we load it into memory. fA00h:8000h = 0x102000
 
+    ; Initialize second program header.
     xor cx, cx
 .LOOP2:
     mov al, byte [gs:si]
@@ -153,6 +155,8 @@ PARSE_ELF_AND_RELOCATE:
 
     mov di, 0x8000              ; Let's reset di to be 0x8000 where we loaded .data into upper mem.
     add di, data_section_size   ; Let's skip past the actual data size to zero .bss
+
+    ; Zeroo BSS after .data section in second program header.
     xor cx, cx
 .LOOP3:
     mov byte [fs:di], 0

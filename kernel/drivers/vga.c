@@ -92,7 +92,7 @@ void vga_putc(char c, size_t x, size_t y)
 void vga_printc(char c) 
 {
 	// Obtain the current cursor location and index.
-	const size_t index = vga.column * VGA_WIDTH + vga.row;
+	size_t index = vga.column * VGA_WIDTH + vga.row;
 
 	// Handle NULL.
 	if(c == '\0')
@@ -117,8 +117,20 @@ void vga_printc(char c)
 	// Handle TAB.
 	else if(c == '\t')
 	{
-		// For now we will just make it behave like a space.
-		c = ' ';
+		vga_prints("    ");
+		return;
+	}
+
+	// Handle BS.
+	else if(c == '\b')
+	{
+		if(vga.row <= 0)
+		{ 
+			return;
+		}
+		vga.row -= 1;
+		terminal_buffer[index-1] = ((uint16_t)' ' | (uint16_t)(vga.color << 8));
+		goto end_vga_printc;
 	}
 
 	terminal_buffer[index] = ((uint16_t)c | (uint16_t)(vga.color << 8));

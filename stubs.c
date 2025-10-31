@@ -71,3 +71,14 @@ size_t biggest_region_index = 0;
 
         uint64_t base   = ((uint64_t)entry->base_addr_high << 32) | entry->base_addr_low;
         uint64_t length = ((uint64_t)entry->length_high << 32)    | entry->length_low;
+
+
+
+
+    static char scancode_to_ascii_upper[] = {                                         \
+    0x00, 0x00, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b', \
+    '\t', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']', '\n',       \
+    0x00, 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', '\'', '`', 0x00,      \
+    '\\', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '/', 0x00, '*', 0x00,      \
+    ' ', 0x00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 // Left off on fx keys. (f1 - f10)
+};
