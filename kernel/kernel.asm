@@ -43,22 +43,29 @@ global SYSTEM_HALT
 KERNEL_INIT:
     mov ebp, stack_top          ; Stack is located at the top of BSS and grows downward.
     mov esp, ebp
+
     mov [boot_drive], dl        ; Save some values passed from boot.bin and stage2.bin
     mov [video_mode], cl
     mov [mmap_desc_addr], bx
+
     call GDT_REINIT                     ; Reinitialize the Global Descriptor Table.
+
     call vga_init                       ; Initialize graphics array and print for success.
     push dword str_os_name
     call vga_prints
+
     push dword str_mmap_init            ; Parse and take control of the memory map passed by BIOS.
     call vga_prints
     xor  ebx, ebx
     mov  bx, word [mmap_desc_addr] 
     push ebx
     call memory_map_init                ; This will print some useful values to the screen.
+
     call REMAP_PICS                     ; Initialize interrupts and service routines.
     call IDT_INIT
+
     ;TODO: PAGING. 
+    
     xor  eax, eax
     mov  al, byte [boot_drive]
     push eax

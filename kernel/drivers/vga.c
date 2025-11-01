@@ -56,28 +56,31 @@ static void vga_update_cursor()
 /* ... */
 static void vga_scroll()
 {
-	size_t i;
-	uint16_t blank = (uint16_t)' ' | (uint16_t)(vga.color << 8);
-
-	// Move all rows up by one.
-	// We loop 24 times (VGA_HEIGHT - 1).
-	for (i = 0; i < (VGA_HEIGHT - 1) * VGA_WIDTH; i++)
+	if(vga.column == VGA_HEIGHT)
 	{
-		// terminal_buffer[i] = the cell on the current row
-		// terminal_buffer[i + VGA_WIDTH] = the cell on the *next* row
-		terminal_buffer[i] = terminal_buffer[i + VGA_WIDTH];
-	}
+		size_t i;
+		uint16_t blank = (uint16_t)' ' | (uint16_t)(vga.color << 8);
 
-	// Clear the last row.
-	// 'i' is already at the start of the last row: (VGA_HEIGHT - 1) * VGA_WIDTH
-	for ( ; i < VGA_HEIGHT * VGA_WIDTH; i++)
-	{
-		terminal_buffer[i] = blank;
-	}
+		// Move all rows up by one.
+		// We loop 24 times (VGA_HEIGHT - 1).
+		for (i = 0; i < (VGA_HEIGHT - 1) * VGA_WIDTH; i++)
+		{
+			// terminal_buffer[i] = the cell on the current row
+			// terminal_buffer[i + VGA_WIDTH] = the cell on the *next* row
+			terminal_buffer[i] = terminal_buffer[i + VGA_WIDTH];
+		}
 
-	// Reset the vga cursor state to the beginning of the last line.
-	vga.column = VGA_HEIGHT - 1;
-	vga.row = 0;
+		// Clear the last row.
+		// 'i' is already at the start of the last row: (VGA_HEIGHT - 1) * VGA_WIDTH
+		for ( ; i < VGA_HEIGHT * VGA_WIDTH; i++)
+		{
+			terminal_buffer[i] = blank;
+		}
+
+		// Reset the vga cursor state to the beginning of the last line.
+		vga.column = VGA_HEIGHT - 1;
+		vga.row = 0;
+	}
 }
 
 /* ... */
@@ -104,12 +107,6 @@ void vga_printc(char c)
 	else if(c == '\n')
 	{
 		vga.column += 1;
-		if(vga.column == VGA_HEIGHT)
-        {
-			vga_scroll();
-			goto end_vga_printc;
-        }
-
 		vga.row = 0;
 		goto end_vga_printc;
 	}
@@ -136,17 +133,15 @@ void vga_printc(char c)
 	terminal_buffer[index] = ((uint16_t)c | (uint16_t)(vga.color << 8));
 	vga.row += 1;
 
+	// Check if we are at the the right edge of the screen.
 	if (vga.row == VGA_WIDTH) 
     {
 		vga.row = 0;
 		vga.column += 1;
-		if(vga.column == VGA_HEIGHT)
-        {
-			vga_scroll();
-        }
 	}
 
 end_vga_printc:
+	vga_scroll();
 	vga_update_cursor();
     return;
 }
@@ -154,6 +149,7 @@ end_vga_printc:
 /* ... */
 void vga_prints(const char* data) 
 {
+	// ...
 	for(size_t i = 0; data[i]!='\0'; i++)
     {
         vga_printc(data[i]);

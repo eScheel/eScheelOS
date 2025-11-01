@@ -93,13 +93,6 @@ LOAD_KERNEL:
 ;
 ;   kernel.elf
 ;
-;   Section Headers:
-;         [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
-;         [ 1] .text             PROGBITS        00100000 001000 0008f1 00  AX  0   0 4096
-;         [ 2] .rodata           PROGBITS        00101000 002000 00008f 00   A  0   0 4096
-;         [ 3] .data             PROGBITS        00102000 003000 000830 00  WA  0   0 4096
-;         [ 4] .bss              NOBITS          00103000 003830 00444c 00  WA  0   0 4096
-;
 ;   Program Headers:
 ;       Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
 ;       LOAD           0x001000 0x00100000 0x00100000 0x0108f 0x0108f R E 0x1000
@@ -206,7 +199,7 @@ struc ELF32_HDR
 	.e_machine:   resw 1      ;	/* Machine architecture. */
 	.e_version:   resd 1      ;	/* ELF format version. */
 	.e_entry:     resd 1      ;	/* Entry point. */
-	.e_phoff:     resd 1      ;	/* Program header file offset. */
+	.e_phoff:     resd 1      ;	/* Program header offset. */
 	.e_shoff:     resd 1      ;	/* Section header file offset. */
 	.e_flags:     resd 1      ;	/* Architecture-specific flags. */
 	.e_ehsize:    resw 1      ;	/* Size of ELF header in bytes. */
@@ -215,6 +208,17 @@ struc ELF32_HDR
 	.e_shentsize: resw 1      ;	/* Size of section header entry. */
 	.e_shnum:     resw 1      ;	/* Number of section header entries. */
 	.e_shstrndx:  resw 1      ;	/* Section name strings section. */
+endstruc
+
+struc ELF32_PHDR
+    .p_type:      resd 1    ; Specifies the type of segment (e.g., PT_LOAD for loadable segments, PT_DYNAMIC for dynamic linking information).
+    .p_offset:    resd 1    ; The offset from the beginning of the ELF file to the start of the segment's data.
+    .p_vaddr:     resd 1    ; The virtual address where the segment should be loaded in memory.
+    .p_paddr:     resd 1    ; The physical address (relevant for some systems, often the same as p_vaddr for typical applications).
+    .p_filesz:    resd 1    ; The size of the segment in the ELF file.
+    .p_memsz:     resd 1    ; The size of the segment in memory. This can be larger than p_filesz if the segment contains uninitialized data (e.g., the .bss section), which is zero-filled in memory.
+    .p_flags:     resd 1    ; Flags indicating permissions and other attributes of the segment (e.g., PF_R for readable, PF_W for writable, PF_X for executable).
+    .p_align:     resd 1    ; The required alignment for the segment in memory.
 endstruc
 
 ;=============================================================================================
@@ -448,6 +452,4 @@ BITS32:
     mov bx,  MMAP_DESC        ; Pass memory map buffer address to kernel.
 
     mov eax, [kernel_entry_point]
-    
-    ; ...
     jmp EAX
