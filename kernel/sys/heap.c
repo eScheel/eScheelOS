@@ -3,6 +3,8 @@
 
 struct HEAP_info system_heap;
 
+
+
 void heap_init(uint32_t base_addr, uint32_t length)
 {
     // Are we less than 2MB
@@ -26,7 +28,7 @@ void heap_init(uint32_t base_addr, uint32_t length)
 
 void* malloc(size_t sz)
 {
-    if(sz == 0) {return;}
+    if(sz == 0) {return((void*)NULL);}
 
-    
+
 }

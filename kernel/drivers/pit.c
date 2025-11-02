@@ -22,7 +22,7 @@ void timer_interrupt_handler()
     timer_ticks += 1;
 
     // ...
-    if(timer_ticks % 50 == 0)
+    if(timer_ticks % 60 == 0)
     {
         uptime_seconds += 1;
         if(uptime_seconds == 60)
