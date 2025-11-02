@@ -34,6 +34,9 @@ extern mmap_avail_entry_count
 extern REMAP_PICS
 extern IDT_INIT
 
+extern timer_init
+extern keyboard_init
+
 extern kernel_main
 
 global SYSTEM_HALT
@@ -63,6 +66,8 @@ KERNEL_INIT:
 
     call REMAP_PICS                     ; Initialize interrupts and service routines.
     call IDT_INIT
+    call timer_init
+    call keyboard_init
 
     ;TODO: PAGING. 
     

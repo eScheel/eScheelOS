@@ -19,9 +19,11 @@ kernel:
 
 	i686-elf-gcc -c kernel/kernel.c           -o kmain.o    -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i686-elf-gcc -c kernel/drivers/vga.c      -o vga.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
+	i686-elf-gcc -c kernel/drivers/pit.c      -o pit.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i686-elf-gcc -c kernel/drivers/keyboard.c -o keyboard.o -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i686-elf-gcc -c kernel/lib/string.c       -o string.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i686-elf-gcc -c kernel/sys/mmap.c         -o mem.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
+	i686-elf-gcc -c kernel/sys/heap.c         -o heap.o     -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 
 	i686-elf-ld *.o -T link.ld -o kernel.elf
 
@@ -31,4 +33,4 @@ clean-boot:
 	rm -rv boot.bin stage2.bin 
 	
 clean-kernel:
-	rm -rv kernel.elf *.o
+	rm -rv *.o

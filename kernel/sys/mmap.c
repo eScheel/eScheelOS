@@ -1,25 +1,11 @@
 #include <kernel.h>
-
-#define SMAP_entry_max 32
-struct SMAP_entry {
-    uint32_t base_addr_low;     // Base Address (64-bit)
-    uint32_t base_addr_high;    // Base Address (64-bit)
-    uint32_t length_low;        // Length (64-bit)
-    uint32_t length_high;       // Length (64-bit)
-    uint32_t type;              // Type of memory region (32-bit)
-    uint32_t acpi;              // ACPI 3.0 Extended Attributes
-}__attribute__((packed));
-
-typedef struct {
-    uint32_t base_low;
-    uint32_t base_high;
-    uint32_t length_low;
-    uint32_t length_high;
-}memory_region_t;
+#include <vga.h>
 
 size_t mmap_avail_entry_count = 0;
-memory_region_t memory_map[SMAP_entry_max];
 uint32_t available_memory_size = 0;
+uint8_t main_memory_index = 0;
+
+memory_region_t memory_map[SMAP_entry_max];
 memory_region_t available_memory_map[SMAP_entry_max];
 
 /* ... */
@@ -49,8 +35,16 @@ void memory_map_init(uint16_t* mmap_desc_addr)
     }
 
     // Loop through available memory regions.
+    uint32_t largest_base_size = 0;
     for(size_t i=0; i<mmap_avail_entry_count; i++)
     {
+        // Saving the index of the largest region to use for the heap or anything else that might need it.
+        if(memory_map[i].length_low > largest_base_size)
+        {
+            largest_base_size = memory_map[i].length_low;
+            main_memory_index = i;
+        }
+
         // Let's fill in our global structure of available memory region addr and size.
         available_memory_map[i] = memory_map[i];
         available_memory_size  += (available_memory_map[i].length_low \

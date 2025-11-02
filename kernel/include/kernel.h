@@ -1,21 +1,40 @@
 #ifndef __KERNEL_H
+#define __KERNEL_H
 
 #include <stddef.h>
 #include <stdint.h>
 #include <stdarg.h>
 
-#define LOADING_SYMBOL  0xff
+// MMAP.C
+#define SMAP_entry_max 32
+struct SMAP_entry {
+    uint32_t base_addr_low;     // Base Address (64-bit)
+    uint32_t base_addr_high;    // Base Address (64-bit)
+    uint32_t length_low;        // Length (64-bit)
+    uint32_t length_high;       // Length (64-bit)
+    uint32_t type;              // Type of memory region (32-bit)
+    uint32_t acpi;              // ACPI 3.0 Extended Attributes
+}__attribute__((packed));
+typedef struct {
+    uint32_t base_low;
+    uint32_t base_high;
+    uint32_t length_low;
+    uint32_t length_high;
+}memory_region_t;
 
-void vga_printc(char);
-void vga_prints(const char*);
-void vga_printd(uint32_t);
-void vga_printh(uint32_t);
+// HEAP.C
+struct HEAP_info {
+    uint32_t base_addr;
+    uint32_t length;
+    uint32_t available;
+    uint32_t used;
+}__attribute__((packed));
 
-size_t strlen(const char*);
-int strncmp(const char*, const char*, size_t);
-void memset(void*, uint8_t, size_t);
-void memcpy(void*, void*, size_t);
 
+// KERNEL.ASM
+extern void SYSTEM_HALT();
+
+// IO.ASM
 extern uint8_t INB(uint8_t);
 extern void   OUTB(uint16_t, uint8_t);
 

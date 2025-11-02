@@ -5,11 +5,12 @@ global IDT_INIT
 global IDT_SET_GATE     
 
 extern CODE_SEG
-extern ISR_STUB         
-extern IRQ1_HANDLER     
+extern ISR_STUB
+extern IRQ0_HANDLER      
+extern IRQ1_HANDLER
 
 IDT_INIT:
-    mov  ecx, 256               ; Set up a loop to initialize all 256 IDT entries.
+    mov  ecx, 256               ; Set up a loop to initialize all 256 IDT entries with a common stub.
     mov  eax, ISR_STUB          ; EAX will hold the address of the default "catch-all" handler.
 .LOOP:
     dec  ecx                ; This value (255, 254, ... 0) will be our interrupt number.
@@ -30,22 +31,28 @@ IDT_INIT:
     test ecx, ecx           ; Check if ECX is zero.
     jnz .LOOP
 
-    ; --- Loop is finished, all 256 entries now point to isr_stub ---
-    
+    ; Loop is finished, all 256 entries now point to isr_stub.
+
     ; Now, we override a specific entry for the keyboard (IRQ 1).
     ; After remapping, IRQ 1 becomes interrupt number 33 (0x20 + 1).
-    push dword 33           ; Push the interrupt number (33). Keyboard.
-    push dword IRQ1_HANDLER ; Push the specific handler address for the keyboard.
-    call IDT_SET_GATE       ; Call the function to set IDT entry 33.
-    
-    add  esp, 8             ; Clean up the 8 bytes (2 dwords) we pushed for this call.
+
+    push dword 32
+    push dword IRQ0_HANDLER ; PIT
+    call IDT_SET_GATE
+
+    push dword 33
+    push dword IRQ1_HANDLER ; KBD
+    call IDT_SET_GATE
+
+    add  esp, 16            ; Clean up the 16 bytes (4 dwords) we pushed for these calls.
+
     lidt[IDT_DESC]          ; All entries are set. Load the IDT Register (IDTR) with the address and size of our new IDT. The CPU will now use this table.
     ret
 
 
-;; IDT_SET_GATE(interrupt_number, handler_address)
-;; Expects: [ebp + 8] = handler_address (pushed last)
-;;          [ebp + 12] = interrupt_number (pushed first)
+; IDT_SET_GATE(interrupt_number, handler_address)
+; Expects: [ebp + 8] = handler_address (pushed last)
+;          [ebp + 12] = interrupt_number (pushed first)
 IDT_SET_GATE:
     push ebp
     mov  ebp, esp
