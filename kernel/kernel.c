@@ -1,9 +1,11 @@
 #include <kernel.h>
 #include <vga.h>
+#include <pit.h>
 
 extern uint8_t main_memory_index;
 extern memory_region_t available_memory_map[SMAP_entry_max];
-extern void heap_init(uint32_t base_addr, uint32_t length);
+
+extern volatile uint32_t uptime_seconds;
 
 void kernel_main(uint8_t boot_drive)
 {
@@ -19,5 +21,10 @@ void kernel_main(uint8_t boot_drive)
 
     // ...
     asm volatile("sti");
-    for(;;){ continue; }
+    for(;;)
+    {
+        vga_printd(uptime_seconds); 
+        timer_wait(1);
+        continue; 
+    }
 }

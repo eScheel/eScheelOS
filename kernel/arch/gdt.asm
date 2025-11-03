@@ -1,4 +1,9 @@
+[bits 32]
 
+section .note.GNU-stack
+    ; This empty section's presence tells the linker
+    ; that the stack should be NON-EXECUTABLE.
+    
 ;=============================================================================================
 section .text
 

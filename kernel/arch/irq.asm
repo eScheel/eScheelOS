@@ -1,3 +1,9 @@
+[bits 32]
+
+section .note.GNU-stack
+    ; This empty section's presence tells the linker
+    ; that the stack should be NON-EXECUTABLE.
+
 ;=============================================================================================
 section .text
 
@@ -8,6 +14,7 @@ global IRQ0_HANDLER
 extern keyboard_interrupt_handler
 extern timer_interrupt_handler
 
+;=============================================================================================
 ;
 ;		     PIC1	PIC2
 ;	Command  0x20	0xA0
@@ -35,36 +42,35 @@ REMAP_PICS:
     out 0x21, al      
     out 0xa1, al
 
-    ; Mask all interrupts for now
+    ; Mask all interrupts.
     mov al, 0xff
     out 0x21, al      
     out 0xa1, al
 
+    ; Unmask used interrupts.
     mov al, 0xfc        ; 11111100b. IRQ , KBD
     out 0x21, al        ; Send new mask to PIC1
 
     ret
 
+;=============================================================================================
+;
 ; This is the handler for IRQ 0 (PIT)
 ; After remapping, it's at IDT entry 32 (0x20)
 IRQ0_HANDLER:
-    cli
     pusha
     call timer_interrupt_handler
     mov  al, 0x20
     out  0x20, al
     popa
-    sti
     iret
 
 ; This is the handler for IRQ 1 (keyboard)
 ; After remapping, it's at IDT entry 33 (0x21)
 IRQ1_HANDLER:
-    cli
     pusha                               ; Save all general-purpose registers
     call keyboard_interrupt_handler 
     mov al, 0x20                        ; ACK PIC1 for the interrupt to stop firing.
     out 0x20, al
     popa                                ; Restore all registers
-    sti
     iret                                ; Return from interrupt

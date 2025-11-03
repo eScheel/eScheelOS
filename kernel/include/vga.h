@@ -12,6 +12,4 @@ void vga_prints(const char*);
 void vga_printd(uint32_t);
 void vga_printh(uint32_t);
 
-void update_vga_hud();
-
 #endif // __VGA_H

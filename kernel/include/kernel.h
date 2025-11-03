@@ -23,13 +23,7 @@ typedef struct {
 }memory_region_t;
 
 // HEAP.C
-struct HEAP_info {
-    uint32_t base_addr;
-    uint32_t length;
-    uint32_t available;
-    uint32_t used;
-}__attribute__((packed));
-
+void heap_init(uint32_t base_addr, uint32_t length);
 
 // KERNEL.ASM
 extern void SYSTEM_HALT();

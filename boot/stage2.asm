@@ -104,9 +104,9 @@ LOAD_KERNEL:
 ;   EDIT: I am finding out it is becoming very annoying to manually change the code when the kernel changes. I will need to parse elf hdr.
 ;
 kernel_entry_point: dd 0                           ; Entry point address defined in the elf header.
-text_rodata_size   equ 0x10e0
+text_rodata_size   equ 0x10b4
 data_section_size  equ 0x8fc                       ; If the FileSiz above changes, change this to it.
-bss_zero_size      equ 0x545d - data_section_size  ; .data(MemSiz - FileSiz) = .bss
+bss_zero_size      equ 0x545c - data_section_size  ; .data(MemSiz - FileSiz) = .bss
 ;
 PARSE_ELF_AND_RELOCATE:
     xor si, si              ; Set up destination segment:offset.

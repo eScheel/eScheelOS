@@ -2,10 +2,8 @@
 #include <vga.h>
 
 #define VGA_WIDTH  80
-#define VGA_HEIGHT 24		// minus 1 for the HUD.
+#define VGA_HEIGHT 23		// minus 2 for the HUD.
 #define VGA_MEMORY 0xB8000
-
-static uint8_t hud_active = 0;
 
 struct video_graphics_array {
 	size_t row;
@@ -15,7 +13,7 @@ struct video_graphics_array {
 
 uint16_t* terminal_buffer = (uint16_t*)VGA_MEMORY;
 
-/* ... */
+/* Initialize the vga memory. */
 void vga_init() 
 {
 	vga.color = 0x1f;
@@ -38,7 +36,6 @@ void vga_init()
 /* ... */
 static void vga_update_cursor()
 {
-	if(hud_active) { return; }
 	/* 
 	 * The equation for finding the index in a linear chunk of memory.
 	 * 	Index = [(y * width) + x]
@@ -60,7 +57,7 @@ static void vga_update_cursor()
 /* ... */
 static void vga_scroll()
 {
-	if(vga.column == VGA_HEIGHT && !hud_active)
+	if(vga.column == VGA_HEIGHT)
 	{
 		size_t i;
 		uint16_t blank = (uint16_t)' ' | (uint16_t)(vga.color << 8);
@@ -223,48 +220,4 @@ void vga_printd(uint32_t d)
     }
 
 	return;
-}
-
-extern struct HEAP_info system_heap;
-extern uint32_t uptime_seconds;
-extern uint32_t uptime_minutes;
-extern uint32_t uptime_hours;
-void vga_update_hud()
-{
-	hud_active = 1;
-
-	size_t rx = vga.row;
-	size_t ry = vga.column;
-	uint8_t rc = vga.color;
-
-	vga.row = 0;
-	vga.column = 24;
-	vga.color = 0x0f;
-
-	for(size_t x=0;x<VGA_WIDTH-1; x++)
-	{
-		vga_printc(' ');
-	}
-	vga.row = 10;
-
-	vga_prints("uptime(\0");
-	vga_printd(uptime_hours);
-	vga_printc(':');
-	vga_printd(uptime_minutes);
-	vga_printc(':');
-	vga_printd(uptime_seconds);
-	vga_printc(')');
-
-	vga.row = 40;
-	vga_prints("heap: available(\0");
-	vga_printd(system_heap.available/(1024*1024));
-	vga_prints("MB)  used(\0");
-	vga_printd(system_heap.used/(1024*1024));
-	vga_prints("MB)\0");
-
-	vga.row = rx;
-	vga.column = ry;
-	vga.color = rc;
-
-	hud_active = 0;
 }

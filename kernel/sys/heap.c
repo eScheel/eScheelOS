@@ -1,9 +1,13 @@
 #include <kernel.h>
 #include <vga.h>
 
+struct HEAP_info {
+    uint32_t base_addr;
+    uint32_t length;
+    uint32_t available;
+    uint32_t used;
+}__attribute__((packed));
 struct HEAP_info system_heap;
-
-
 
 void heap_init(uint32_t base_addr, uint32_t length)
 {
@@ -24,11 +28,4 @@ void heap_init(uint32_t base_addr, uint32_t length)
     system_heap.length = length;
     system_heap.available = length;
     system_heap.used = 0;
-}
-
-void* malloc(size_t sz)
-{
-    if(sz == 0) {return((void*)NULL);}
-
-
 }

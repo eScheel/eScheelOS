@@ -1,3 +1,9 @@
+[bits 32]
+
+section .note.GNU-stack
+    ; This empty section's presence tells the linker
+    ; that the stack should be NON-EXECUTABLE.
+
 ;=============================================================================================
 section .text
 
@@ -9,11 +15,13 @@ extern ISR_STUB
 extern IRQ0_HANDLER      
 extern IRQ1_HANDLER
 
+;=============================================================================================
+
 IDT_INIT:
     mov  ecx, 256               ; Set up a loop to initialize all 256 IDT entries with a common stub.
     mov  eax, ISR_STUB          ; EAX will hold the address of the default "catch-all" handler.
 .LOOP:
-    dec  ecx                ; This value (255, 254, ... 0) will be our interrupt number.
+    dec  ecx                ; Decrement our interrupt number.
     
     ; Prepare to call IDT_SET_GATE(interrupt_number, handler_address)
     ; The cdecl calling convention pushes arguments onto the stack from right to left.
@@ -49,7 +57,8 @@ IDT_INIT:
     lidt[IDT_DESC]          ; All entries are set. Load the IDT Register (IDTR) with the address and size of our new IDT. The CPU will now use this table.
     ret
 
-
+;=============================================================================================
+;
 ; IDT_SET_GATE(interrupt_number, handler_address)
 ; Expects: [ebp + 8] = handler_address (pushed last)
 ;          [ebp + 12] = interrupt_number (pushed first)
