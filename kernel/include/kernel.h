@@ -22,9 +22,6 @@ typedef struct {
     uint32_t length_high;
 }memory_region_t;
 
-// HEAP.C
-void heap_init(uint32_t base_addr, uint32_t length);
-
 // KERNEL.ASM
 extern void SYSTEM_HALT();
 
