@@ -1,13 +1,17 @@
 #include <kernel.h>
 #include <pit.h>
 
-volatile uint32_t timer_ticks = 0;
-volatile uint32_t uptime_seconds = 0;
-volatile size_t timer_counter = 0;
+static volatile uint32_t timer_ticks;
+static volatile size_t timer_counter;
+volatile uint32_t system_uptime_seconds;
 
 /* ... */
 void timer_init()
 {
+    timer_ticks = 0;
+    timer_counter = 0;
+    system_uptime_seconds = 0;
+
     // 1,193,180 (ticks/sec) / 100 (interrupts/sec) = 11931 (ticks/interrupt)
     int divisor = 1193180 / 100;   /* Calculate our divisor */
 
@@ -26,18 +30,15 @@ void timer_init()
 /* ... */
 void timer_interrupt_handler()
 {
-    timer_ticks += 1;
+    timer_ticks++;
 
     // A second has passed .
     if(timer_ticks % 100 == 0)
     {
-        // ...
-        uptime_seconds++;
+        system_uptime_seconds++;
 
-        // If a wait function is currently active.
-        if(timer_counter > 0)
-        {
-            timer_counter--;
+        if(timer_counter > 0) {
+           timer_counter--;
         }
     }
 }
@@ -48,8 +49,7 @@ void timer_wait(uint32_t sec)
     asm volatile("cli");
     timer_counter = sec;
     asm volatile("sti");
-    while(timer_counter) 
-    { 
-        continue; 
+    while(timer_counter) { 
+          continue; 
     }
 }

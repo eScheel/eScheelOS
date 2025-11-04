@@ -27,26 +27,18 @@ void heap_init(uint32_t base_addr, uint32_t length)
 /* ... */
 void print_heap_info()
 {
-    vga_prints("HEAP_INFO -----\nBASE:  ");
+    vga_prints("offset     size   avail   used    top\n");
     vga_printh(system_heap.base);
-    vga_printc('\n');
-    vga_prints("SIZE:  ");
-    vga_printd(system_heap.length);
-    vga_printc('\n');
-    vga_prints("AVAIL: ");
-    vga_printd(system_heap.available);
-    vga_printc('\n');
-    vga_prints("USED:  ");
+    vga_prints("h  ");
+    vga_printd(system_heap.length/(1024*1024));
+    vga_prints("MB    ");
+    vga_printd(system_heap.available/(1024*1024));
+    vga_prints("MB     ");
     vga_printd(system_heap.used);
-    vga_printc('\n');
-    vga_prints("TOP:   ");
+    vga_prints("B      ");
     vga_printh(system_heap.end);
-    vga_printc('\n');
-    vga_prints("---------------");
-    vga_printc('\n');
+    vga_prints("h\n");
 }
-
-
 
 /* ... */
 void* malloc(size_t sz)
@@ -56,5 +48,5 @@ void* malloc(size_t sz)
         return((void*)0); 
     }
 
-
+    return((void*)0);
 }

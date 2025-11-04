@@ -1,6 +1,10 @@
 #ifndef __HEAP_H
 #define __HEAP_H    1
 
+#include <stddef.h>
+#include <stdint.h>
+#include <stdarg.h>
+
 struct HEAP_info {
     uint32_t base;
     uint32_t length;

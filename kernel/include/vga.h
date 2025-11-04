@@ -5,7 +5,17 @@
 #include <stdint.h>
 #include <stdarg.h>
 
+#define VGA_WIDTH  80
+#define VGA_HEIGHT 25
+#define VGA_MEMORY 0xB8000
+
 #define LOADING_SYMBOL  0xff
+
+size_t vga_get_x();
+size_t vga_get_y();
+
+void vga_putc(char c, size_t x, size_t y);
+void vga_puts(const char *s, size_t x, size_t y);
 
 void vga_printc(char);
 void vga_prints(const char*);

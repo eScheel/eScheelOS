@@ -1,17 +1,25 @@
 #include <kernel.h>
 #include <vga.h>
 
-#define VGA_WIDTH  80
-#define VGA_HEIGHT 23		// minus 2 for the HUD.
-#define VGA_MEMORY 0xB8000
-
-struct video_graphics_array {
-	size_t row;
-	size_t column;
+static struct video_graphics_array {
+	size_t cursor_x;
+	size_t cursor_y;
 	uint8_t color;
 }vga;
 
-uint16_t* terminal_buffer = (uint16_t*)VGA_MEMORY;
+static uint16_t* terminal_buffer = (uint16_t*)VGA_MEMORY;
+
+size_t vga_get_x()
+{
+	//size_t ret = vga.cursor_x;
+	return(vga.cursor_x);
+}
+
+size_t vga_get_y()
+{
+	//size_t ret = vga.cursor_y;
+	return(vga.cursor_y);
+}
 
 /* Initialize the vga memory. */
 void vga_init() 
@@ -19,17 +27,17 @@ void vga_init()
 	vga.color = 0x1f;
 	
 	// Clear the screen.
-	for(vga.column = 0; vga.column < VGA_HEIGHT; vga.column++) 
+	for(vga.cursor_y = 0; vga.cursor_y < VGA_HEIGHT; vga.cursor_y++) 
     {
-		for(vga.row = 0; vga.row < VGA_WIDTH; vga.row++) 
+		for(vga.cursor_x = 0; vga.cursor_x < VGA_WIDTH; vga.cursor_x++) 
         {
-			const size_t index = vga.column * VGA_WIDTH + vga.row;
+			const size_t index = vga.cursor_y * VGA_WIDTH + vga.cursor_x;
 			terminal_buffer[index] = (uint16_t)' ' | (uint16_t)(vga.color << 8);
 		}
 	}
 
-    vga.column = 0;
-    vga.row = 0;
+    vga.cursor_y = 0;
+    vga.cursor_x = 0;
     return;
 }
 
@@ -40,7 +48,7 @@ static void vga_update_cursor()
 	 * The equation for finding the index in a linear chunk of memory.
 	 * 	Index = [(y * width) + x]
 	 */
-	uint16_t index = vga.column * VGA_WIDTH + vga.row;
+	uint16_t index = vga.cursor_y * VGA_WIDTH + vga.cursor_x;
 	/* 
 	 *  This sends a command to indicies 14 and 15 in the
 	 *  CRT Control Register of the VGA controller. These
@@ -57,7 +65,7 @@ static void vga_update_cursor()
 /* ... */
 static void vga_scroll()
 {
-	if(vga.column == VGA_HEIGHT)
+	if(vga.cursor_y == VGA_HEIGHT)
 	{
 		size_t i;
 		uint16_t blank = (uint16_t)' ' | (uint16_t)(vga.color << 8);
@@ -79,8 +87,8 @@ static void vga_scroll()
 		}
 
 		// Reset the vga cursor state to the beginning of the last line.
-		vga.column = VGA_HEIGHT - 1;
-		vga.row = 0;
+		vga.cursor_y = VGA_HEIGHT - 1;
+		vga.cursor_x = 0;
 	}
 }
 
@@ -93,10 +101,26 @@ void vga_putc(char c, size_t x, size_t y)
 }
 
 /* ... */
+void vga_puts(const char *s, size_t x, size_t y)
+{
+	for(size_t i=0; s[i]!=0; i++)
+	{
+		vga_putc(s[i], x, y);
+		
+		x++;
+		if(x == VGA_WIDTH)
+		{
+			x  = 0;
+			y += 1;		// TODO: Handle scrolling.
+		}
+	}
+}
+
+/* ... */
 void vga_printc(char c) 
 {
 	// Obtain the current cursor location and index.
-	size_t index = vga.column * VGA_WIDTH + vga.row;
+	size_t index = vga.cursor_y * VGA_WIDTH + vga.cursor_x;
 
 	// Handle NULL.
 	if(c == '\0')
@@ -107,8 +131,8 @@ void vga_printc(char c)
 	// Handle LF.
 	else if(c == '\n')
 	{
-		vga.column += 1;
-		vga.row = 0;
+		vga.cursor_y += 1;
+		vga.cursor_x = 0;
 		goto end_vga_printc;
 	}
 
@@ -122,23 +146,23 @@ void vga_printc(char c)
 	// Handle BS.
 	else if(c == '\b')
 	{
-		if(vga.row <= 0)
+		if(vga.cursor_x <= 0)
 		{ 
 			return;
 		}
-		vga.row -= 1;
+		vga.cursor_x -= 1;
 		terminal_buffer[index-1] = ((uint16_t)' ' | (uint16_t)(vga.color << 8));
 		goto end_vga_printc;
 	}
 
 	terminal_buffer[index] = ((uint16_t)c | (uint16_t)(vga.color << 8));
-	vga.row += 1;
+	vga.cursor_x += 1;
 
 	// Check if we are at the the right edge of the screen.
-	if (vga.row == VGA_WIDTH) 
+	if (vga.cursor_x == VGA_WIDTH) 
     {
-		vga.row = 0;
-		vga.column += 1;
+		vga.cursor_x = 0;
+		vga.cursor_y += 1;
 	}
 
 end_vga_printc:
