@@ -17,11 +17,11 @@ void heap_init(uint32_t base_addr, uint32_t length)
     }
 
     // ...
-    system_heap.base = base_addr;
+    system_heap.base      = base_addr;
     system_heap.length    = len;
     system_heap.available = len;
-    system_heap.used = 0;
-    system_heap.end = base_addr + len;
+    system_heap.used      = 0;
+    system_heap.end       = base_addr + len;
 }
 
 /* ... */
@@ -46,7 +46,9 @@ void print_heap_info()
     vga_printc('\n');
 }
 
-/*
+
+
+/* ... */
 void* malloc(size_t sz)
 {
     if(sz == 0) 
@@ -56,4 +58,3 @@ void* malloc(size_t sz)
 
 
 }
-*/

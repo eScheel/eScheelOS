@@ -7,5 +7,7 @@ LOWER:
     0x10000 - 0xFFFFF : Assume reserved for video memory and stuff. 
 
 UPPER:
-    0x100000 - 0x200000 : kernel .text .rodata .data .bss 
-    0x200000 - 0x400000 : Heap (Seems to be avail for systems I am targeting..)
+    0x100000 - 0x1FFFFF : kernel .text .rodata .data .bss 
+    0x200000 - 0x9FFFFF : Heap (Seems to be avail for systems I am targeting..)
+    0xA00000 - 0xA00FFF : Keyboard Input Buffer
+    0xA01000 
