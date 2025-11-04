@@ -26,8 +26,9 @@ void kernel_main(uint8_t boot_drive)
     asm volatile("sti");
     for(;;)
     {
-        //timer_wait(1);
-        //vga_printd(system_uptime_seconds);
+        char* dummy = (char*)malloc(0x20000);
+        timer_wait(1);
+        print_heap_info();
         continue; 
     }
 }

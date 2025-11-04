@@ -15,4 +15,7 @@ struct HEAP_info {
 void heap_init(uint32_t base_addr, uint32_t length);
 void print_heap_info();
 
+void* malloc(size_t sz);
+void free(void* b);
+
 #endif // __HEAP_H
