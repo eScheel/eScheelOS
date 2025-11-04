@@ -7,8 +7,7 @@
 
 struct HEAP_info {
     uint32_t base;
-    uint32_t length;
-    uint32_t available;
+    uint32_t size;
     uint32_t used;
     uint32_t end;
 }__attribute__((packed));

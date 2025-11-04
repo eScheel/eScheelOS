@@ -21,6 +21,8 @@ typedef struct {
     uint32_t length_low;
     uint32_t length_high;
 }memory_region_t;
+extern uint8_t main_memory_index;
+extern memory_region_t available_memory_map[];
 
 // KERNEL.ASM
 extern void SYSTEM_HALT();
@@ -28,5 +30,6 @@ extern void SYSTEM_HALT();
 // IO.ASM
 extern uint8_t INB(uint8_t);
 extern void   OUTB(uint16_t, uint8_t);
+
 
 #endif // __KERNEL_H

@@ -1,16 +1,20 @@
 #include <kernel.h>
 #include <vga.h>
 
-size_t mmap_avail_entry_count = 0;
-uint32_t available_memory_size = 0;
-uint8_t main_memory_index = 0;
-
+uint8_t main_memory_index;
 memory_region_t memory_map[SMAP_entry_max];
 memory_region_t available_memory_map[SMAP_entry_max];
 
 /* ... */
 void memory_map_init(uint16_t* mmap_desc_addr)
 {
+    main_memory_index = 0;
+
+    // ...
+    uint32_t available_memory_size = 0;
+    size_t mmap_avail_entry_count = 0;
+
+    // The first two bytes of the mmap are the size.
     size_t num_entries = (uint16_t)mmap_desc_addr[0];
 
     // Initialize the entry_array structure with the address of memory map form bios + size. 
