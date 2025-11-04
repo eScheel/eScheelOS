@@ -26,9 +26,6 @@ void kernel_main(uint8_t boot_drive)
     asm volatile("sti");
     for(;;)
     {
-        char* dummy = (char*)malloc(0x20000);
-        timer_wait(1);
-        print_heap_info();
         continue; 
     }
 }

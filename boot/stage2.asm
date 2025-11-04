@@ -95,8 +95,8 @@ LOAD_KERNEL:
 ;
 ;   Program Headers:
 ;       Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
-;       LOAD           0x001000 0x00100000 0x00100000 0x0108f 0x0108f R E 0x1000
-;       LOAD           0x003000 0x00102000 0x00102000 0x00830 0x0544c RW  0x1000
+;       LOAD           0x001000 0x00100000 0x00100000 0x020f9 0x020f9 R E 0x1000
+;       LOAD           0x004000 0x00103000 0x00103000 0x008fc 0x05878 RW  0x1000
 ;
 ;   Eventually we should maybe change this to actually parse the header in the boot loader rather than using i686-elf-readelf.
 ;   But I'm not sure we need to do that since we know our kernel and this is our bootloader. And this seems to work. So far ..
@@ -132,8 +132,8 @@ PARSE_ELF_AND_RELOCATE:
     cmp cx, text_rodata_size
     jl .LOOP1
 
-    mov si, 0x7000          ; This should be where our section .data starts after .text and .rodata.
-    mov di, 0x8000          ; This should be where we load it into memory. fA00h:8000h = 0x102000
+    mov si, 0x7000          ; This should be where our section .data starts after .text and .rodata
+    mov di, 0x8000          ; This should be where we load it into memory. fA00h:8000h = 0x103000
 
     ; Initialize second program header.
     xor cx, cx
