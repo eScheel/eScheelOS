@@ -90,105 +90,193 @@ LOAD_KERNEL:
 
 ;=============================================================================================
 
-;
-;   kernel.elf
+;   Elf file type is EXEC (Executable file)
+;   Entry point 0x100600
+;   There are 3 program headers, starting at offset 52
 ;
 ;   Program Headers:
 ;       Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
-;       LOAD           0x001000 0x00100000 0x00100000 0x020f9 0x020f9 R E 0x1000
-;       LOAD           0x004000 0x00103000 0x00103000 0x008fc 0x05878 RW  0x1000
+;       LOAD           0x001000 0x00100000 0x00100000 0x010f9 0x010f9 R E 0x1000
+;       LOAD           0x003000 0x00102000 0x00102000 0x008fc 0x05678 RW  0x1000
+;       GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RW  0x10
 ;
-;   Eventually we should maybe change this to actually parse the header in the boot loader rather than using i686-elf-readelf.
-;   But I'm not sure we need to do that since we know our kernel and this is our bootloader. And this seems to work. So far ..
+;   Section to Segment mapping:
+;       Segment Sections...
+;       00     .text .rodata 
+;       01     .data .bss 
+;       02 
 ;
-;   EDIT: I am finding out it is becoming very annoying to manually change the code when the kernel changes. I will need to parse elf hdr.
-;
-kernel_entry_point: dd 0                           ; Entry point address defined in the elf header.
-text_rodata_size   equ 0x10f9
-data_section_size  equ 0x8fc                       ; If the FileSiz above changes, change this to it.
-bss_zero_size      equ 0x5678 - data_section_size  ; .data(MemSiz - FileSiz) = .bss
+kernel_entry_point:   dd 0          ; Entry point address defined in the elf header.
+program_header_count: dw 0          ; ...
+filesz: dw 0
+memsz:  dw 0
+bsssz:  dw 0
+physical_address: dd 0
 ;
 PARSE_ELF_AND_RELOCATE:
-    xor si, si              ; Set up destination segment:offset.
+
+    ; This will be used to parse the headers.
+    xor si, si
     mov gs, si
     mov si, kernel_addr_tmp ; 4000h is where the LOAD_KERNEL routine loaded the kernel.
 
-    call ENSURE_ELF         ; Let's make sure it is an ELF file.
-    call GET_ELF_ENTRY      ; Let's parse the entry point address.
-    add si, 0x1000          ; Skip past the elf header.
+    ; This will be used as the source address in lower mem.
+    xor bx, bx
+    mov es, bx
+    mov bx, kernel_addr_tmp + 0x1000    ; Skip past headers as well.
 
+    ; This will be used as the destination address in upper mem.
     mov di, 0xfA00          ; Set up destination segment:offset.
     mov fs, di
-    mov di, 0x6000          ; We are putting our kernel at 0x100000 or FA00:6000
+    mov di, 0x6000          ; We are putting our kernel at 0x100000 or FA00:6000   
 
-    ; Initialize first program header.
-    xor cx, cx
-.LOOP1:
+    ; Check the magic to see if valid elf file.
     mov al, byte [gs:si]
-    mov byte [fs:di], al    ; Move whats at section .text into 0x100000
-    inc di
-    inc si                  ; TODO: Change this to use the rep instruction.
-    inc cx
-    cmp cx, text_rodata_size
-    jl .LOOP1
+    cmp al, 0x7f
+    jne ELF_PARSE_FAILED
+    mov al, byte [gs:si + 1]
+    cmp al, 'E'
+    jne ELF_PARSE_FAILED 
+    mov al, byte [gs:si + 2]
+    cmp al, 'L'
+    jne ELF_PARSE_FAILED
+    mov al, byte [gs:si + 3]
+    cmp al, 'F'
+    jne ELF_PARSE_FAILED
 
-    mov si, 0x7000          ; This should be where our section .data starts after .text and .rodata
-    mov di, 0x8000          ; This should be where we load it into memory. fA00h:8000h = 0x102000
+    ; Get the kernel offset address address from the header.
+    mov  eax, [gs:si + ELF32_HDR.e_entry]
+    mov [kernel_entry_point], eax
+;    nop
+;    mov  dx, [kernel_entry_point + 2]
+;    call BIOS_PRINTH
+;    mov  dx, [kernel_entry_point]
+;    call BIOS_PRINTH
+;    mov  al, ' '
+;    call BIOS_PRINTC
 
-    ; Initialize second program header.
+    ; Get the program header count.
+    mov dx, [gs:si + ELF32_HDR.e_phnum]
+    mov [program_header_count], dx
+;    nop
+;    call BIOS_PRINTH
+;    call BIOS_PRINTNL
+
+    ; Let's skip past the header now and start reading program headers.
+    add si, ELF32_HDR_size
+
+    ; Loop through each program header.
     xor cx, cx
-.LOOP2:
-    mov al, byte [gs:si]
-    mov byte [fs:di], al    ; Move whats at section .data into 0x102000
+PE_LOOP:
+    ; Check if PT_LOAD == 1
+    mov eax, [gs:si + ELF32_PHDR.p_type]
+    cmp eax, 1
+    jne SKIP_PH
+;    nop
+;    mov  dx, [gs:si + ELF32_PHDR.p_type]
+;    call BIOS_PRINTH
+;    mov  al, ' '
+;    call BIOS_PRINTC
+
+    ; For now we will just get lower 16bits of the memsz and filesz to fill in.
+    mov dx, word [gs:si + ELF32_PHDR.p_memsz]
+    mov [memsz], dx
+;    nop
+;    call BIOS_PRINTH
+;    mov  al, ' '
+;    call BIOS_PRINTC
+    ;
+    mov dx, word [gs:si + ELF32_PHDR.p_filesz]
+    mov [filesz], dx  
+;    nop
+;    call BIOS_PRINTH
+;    mov  al, ' '
+;    call BIOS_PRINTC
+
+    ; ...
+    mov eax, [gs:si + ELF32_PHDR.p_paddr]
+    mov [physical_address], eax
+
+    ; Write the bytes to the destination address.
+    push cx     ; Save cx since being used for program_header_count.
+    xor  cx, cx
+.LOOP:
+    mov al, byte [es:bx]
+    mov byte [fs:di], al    
     inc di
-    inc si                  ; TODO: Change this to use the rep instruction.
+    inc bx                  ; TODO: Change this to use the rep instruction.
     inc cx
-    cmp cx, data_section_size
-    jl .LOOP2       
+    cmp cx, word [memsz]
+    jl .LOOP
+    pop cx
 
-    mov di, 0x8000              ; Let's reset di to be 0x8000 where we loaded .data into upper mem.
-    add di, data_section_size   ; Let's skip past the actual data size to zero .bss
+    ; Take away what the previous loop incremented for easier calculation.
+    sub bx, word [memsz]
+    sub di, word [memsz]
+;    nop
+;    mov  dx, bx
+;    call BIOS_PRINTH
+;    mov  al, ' '
+;    call BIOS_PRINTC
+;    mov  dx, di
+;    call BIOS_PRINTH
+;    mov  al, ' '
+;    call BIOS_PRINTC     
 
-    ; Zeroo BSS after .data section in second program header.
-    xor cx, cx
+    ; If filesz == memsz , we probably ar not padded with zeros.
+    mov ax, [memsz]
+    cmp ax, [filesz]
+    je  SKIP_BSS
+    ; Let's get the difference and store it.
+    sub  ax, [filesz]
+    mov  [bsssz], ax
+;    nop
+;    mov  dx, [bsssz]
+;    call BIOS_PRINTH
+;    call BIOS_PRINTNL
+
+    ; Zero BSS ...
+    push di
+    push cx
+    xor  cx, cx
+    add  di, [filesz]   ; Let's skip past the actual data size to zero .bss
 .LOOP3:
     mov byte [fs:di], 0
     inc di
     inc cx
-    cmp cx, bss_zero_size
+    cmp cx, [bsssz]
     jl .LOOP3
+    pop cx
+    pop di
+
+SKIP_BSS:
+;    nop
+;    call BIOS_PRINTNL
+
+    ; For now we will just skip 0x2000 ahead as it seems the linker adds sections together in 2's.
+    ; Padded at 0x1000
+    add bx, 0x2000
+    add di, 0x2000
+
+    ; Skip to the next phdr.
+    add si, ELF32_PHDR_size
+
+    ; Check if we are out of phdrs.
+    inc cx
+    cmp cx, [program_header_count]
+    jl  PE_LOOP
 
     ret
 
-;=============================================================================================
+SKIP_PH:
+    ; Skip to the next phdr.
+    add si, ELF32_PHDR_size
 
-ENSURE_ELF:
-    pusha
-    mov al, byte [gs:si]
-    cmp al, 0x7f
-    jne ELF_PARSE_FAILED
-    inc si
-    mov al, byte [gs:si]
-    cmp al, 'E'
-    jne ELF_PARSE_FAILED 
-    inc si
-    mov al, byte [gs:si]
-    cmp al, 'L'
-    jne ELF_PARSE_FAILED
-    inc si
-    mov al, byte [gs:si]
-    cmp al, 'F'
-    jne ELF_PARSE_FAILED
-    popa
-    ret
+    ; ...
+    inc cx
+    cmp cx, [program_header_count]
+    jl  PE_LOOP  
 
-GET_ELF_ENTRY:
-    pusha
-    mov bx, word [gs:si + ELF32_HDR.e_entry]
-    mov dx, word [gs:si + ELF32_HDR.e_entry + 2]
-    mov [kernel_entry_point], bx
-    mov [kernel_entry_point + 2], dx
-    popa
     ret
 
 ;=============================================================================================
@@ -256,6 +344,18 @@ BIOS_PRINTC:
     popa
     ret
 
+;
+;
+;
+BIOS_PRINTNL:
+    push ax
+    mov  al, 0xa
+    call BIOS_PRINTC
+    mov  al, 0xd
+    call BIOS_PRINTC
+    pop  ax
+    ret
+
 ;   Prints a string of characters to the screen.
 ;   Caller must put string in si register.
 ;
@@ -270,6 +370,64 @@ BIOS_PRINTS:
 BIOS_PRINTS_DONE:
     popa
     ret
+
+;   Prints a decimal value to the screen.
+;   Caller must put data in AX register.
+;
+BIOS_PRINTD:
+    pusha			    ; Save the stack.
+    mov bx, 10		    ; Digits are extracted dividing by ten.
+    xor cx, cx		    ; Start the counter off with zero.
+.CONV_LOOP:
+    mov  dx, 0		    ; Necessary to divide by BX.
+    div  bx		        ; DX:AX / 10 = AX(quotient):DX(remainder)
+    push dx		        ; Save DX for later use.
+    inc  cx		        ; Increment the counter.
+    cmp  ax, 0		    ; If number is not zero,
+    jne .CONV_LOOP      ; then do it all again.
+.DISP_LOOP:
+    pop  dx		        ; Restore DX to get our number in reverse now.
+    add  dl, 48		    ; Convert digit to character.
+    mov  al, dl		    ; Now move our character in AL to be printed.
+    call BIOS_PRINTC	; Print it out.
+    dec  cx		        ; Decrement our counter.
+    cmp  cx, 0		    ; If counter is zero then,
+    je  .DONE	        ;  we are done.
+    jmp .DISP_LOOP      ; Else, do it again.
+.DONE:
+    popa		 ; Restore the stack.
+    ret			 ; Return.
+
+;   Prints a hex value to the screen.
+;   Caller must put data in DX register.
+;
+BIOS_PRINTH:
+    pusha			        ; Save the stack.
+    xor  cx, cx		        ; Start our counter off with zero.
+    mov  si, bph_hexout     ; Move the addr of our template string into SI.
+.NEXT_CHAR:
+    mov  bx, dx		        ; Copy the next char into BX to be converted.
+    shr  bx, 4		        ; Shift the current char right four times.
+    add  bh, 0x30	        ; ASCII numbers start at a value of 0x30 || 48
+    cmp  bh, 0x39	        ; ASCII numbers end at a value of   0x39 || 57
+    jg  .ADD_SEVEN          ; ASCII (A-F):((57+1)+7):(0x41||65)-(0x46|| 70)
+.ADD_CHAR:		
+    mov byte [si], bh	    ; Move our current character to the addr of SI.
+    inc  si		            ; Increment SI.
+    inc  cx		            ; Increment our counter.
+    shl  dx, 4		        ; Shift the next character left four times.
+    or   dx, dx		        ; Logical OR DX with itself.
+    jnz .NEXT_CHAR          ; If DX came back zero then do the next char.
+    cmp  cx, 4	 	        ; If counter is four or higher, we are done. 
+    jl  .NEXT_CHAR          ; Else, then do the next character.
+    mov  si, bph_hexout      ; Move the addr of our formatted templated into SI. 
+    call BIOS_PRINTS	    ; And print it out.
+    popa		            ; Restore the stack.
+    ret			            ; Return.
+.ADD_SEVEN:
+    add  bh, 0x07	        ; Add seven to BH so we are at (A-F)
+    jmp .ADD_CHAR           ; Now add the next character.
+bph_hexout: db '0000',0
 
 ;
 ;

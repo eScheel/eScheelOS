@@ -5,8 +5,8 @@
 ;   Author: Jacob Scheel
 ;
 ;   This code will do the following:
-;       1) Force set CS to zero and store boot drive number passed by BIOS.
-;       2) Load and execute the stage2.bin code at address 1000h.
+;       1) Clear the direction flag, force set CS to zero, and store boot drive number passed by BIOS.
+;       2) Reset the drive and, Load and execute the stage2.bin code at address 1000h.
 ;
 [org 0x7c00]
 [bits 16]

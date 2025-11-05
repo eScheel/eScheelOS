@@ -193,25 +193,6 @@ BIOS_DISK_RESET:
 
 
 
-    mov al, byte [fs:di]
-    call BIOS_PRINTC    
-    inc di
-    mov al, byte [fs:di]
-    call BIOS_PRINTC 
-    inc di
-    mov al, byte [fs:di]
-    call BIOS_PRINTC
-    call BIOS_PRINTNL
-
-
-
-
-
-
-
-
-
-
 
 
 RELOCATE_KERNEL:
@@ -282,24 +263,6 @@ LOAD_KERNEL:
     int  0x13                ; Call BIOS disk interrupt.
     jc   KERNEL_LOAD_FAILED
     ret
-
-
-
-
-
-
-
-
-    xor  ebx, ebx               ; Zero out to be sure top bits are uninitialized.
-    xor  eax, eax                   
-    xor  edx, edx                   
-    mov  bx, word [mmap_desc_addr]
-    mov  al, byte [video_mode]
-    mov  dl, byte [boot_drive]
-    push edx                    ; Pass boot drive to kernel main.
-    push eax                    ; Pass video mode to kernel main.
-    push ebx                    ; Pass mmap desc addr to kernel main.
-    call kernel_main
 
 
 
@@ -385,90 +348,6 @@ LOAD_KERNEL:
 
 
 
-
-
-
-
-
-
-    ;=============================================================================================
-section .text
-
-global IDT_INIT
-
-IDT_INIT:
-    lidt[IDT_DESC]
-    ret
-
-;=============================================================================================
-section .data
-
-struc IDT_ENTRY
-    .offset_low:  resw 1
-    .selector:    resw 1
-    .zero:        resb 1
-    .type:        resb 1
-    .offset_high: resw 1
-endstruc
-; Intel has a max of 256 entries.
-IDT_ENTRY_max equ   256
-
-IDT_PTR:
-    times (IDT_ENTRY_max * IDT_ENTRY_size) db 0
-
-IDT_DESC:
-    dw  (IDT_ENTRY_max * IDT_ENTRY_size) - 1
-    dd  IDT_PTR
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-;
-;		     PIC1	PIC2
-;	Command  0x20	0xA0
-;	Data	 0x21	0xA1
-REMAP_PICS:
-    mov al, 0x11
-    out 0x20, al      ; ICW1 - begin initialization
-    out 0xa0, al
-
-    mov al, 0x20
-    out 0x21, al      ; ICW2 - remap offset address of IDT
-    mov al, 0x28
-    out 0xa1, al
-
-    mov al, 0x00
-    out 0x21, al      ; ICW3 - setup cascading
-    out 0xa1, al      ; For now we won't use cascading.
-
-    mov al, 0x01
-    out 0x21, al      ; ICW4 - environment info
-    out 0xa1, al
-
-    mov al, 0xff
-    out 0x21, al      ; Mask Interrupts, 0 = active. 1 = unactive.
-    out 0xa1, al      ; For now let's mask them all.
-
-    ret
-
-
-
-
-
-
-
-
 .LOOP:
     dec  ecx                ; This value (255, 254, ... 0) will be our interrupt number.
     
@@ -497,10 +376,72 @@ REMAP_PICS:
 
 
 
-SYSTEM_HALT:
-    push dword str_halted
-    call vga_prints
-    cli
-.LOOP:    
-    hlt
-    jmp  .LOOP      ; Just incase a nmi hits.
+;
+;   kernel.elf
+;
+;   Program Headers:
+;       Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+;       LOAD           0x001000 0x00100000 0x00100000 0x020f9 0x020f9 R E 0x1000
+;       LOAD           0x004000 0x00103000 0x00103000 0x008fc 0x05878 RW  0x1000
+;
+;   Eventually we should maybe change this to actually parse the header in the boot loader rather than using i686-elf-readelf.
+;   But I'm not sure we need to do that since we know our kernel and this is our bootloader. And this seems to work. So far ..
+;
+;   EDIT: I am finding out it is becoming very annoying to manually change the code when the kernel changes. I will need to parse elf hdr.
+;
+kernel_entry_point: dd 0                           ; Entry point address defined in the elf header.
+text_rodata_size   equ 0x10f9
+data_section_size  equ 0x8fc                       ; If the FileSiz above changes, change this to it.
+bss_zero_size      equ 0x5678 - data_section_size  ; .data(MemSiz - FileSiz) = .bss
+;
+PARSE_ELF_AND_RELOCATE:
+    xor si, si              ; Set up destination segment:offset.
+    mov gs, si
+    mov si, kernel_addr_tmp ; 4000h is where the LOAD_KERNEL routine loaded the kernel.
+
+    call ENSURE_ELF         ; Let's make sure it is an ELF file.
+    call GET_ELF_ENTRY      ; Let's parse the entry point address.
+    add si, 0x1000          ; Skip past the elf header.
+
+    mov di, 0xfA00          ; Set up destination segment:offset.
+    mov fs, di
+    mov di, 0x6000          ; We are putting our kernel at 0x100000 or FA00:6000
+
+    ; Initialize first program header.
+    xor cx, cx
+.LOOP1:
+    mov al, byte [gs:si]
+    mov byte [fs:di], al    ; Move whats at section .text into 0x100000
+    inc di
+    inc si                  ; TODO: Change this to use the rep instruction.
+    inc cx
+    cmp cx, text_rodata_size
+    jl .LOOP1
+
+    mov si, 0x7000          ; This should be where our section .data starts after .text and .rodata
+    mov di, 0x8000          ; This should be where we load it into memory. fA00h:8000h = 0x102000
+
+    ; Initialize second program header.
+    xor cx, cx
+.LOOP2:
+    mov al, byte [gs:si]
+    mov byte [fs:di], al    ; Move whats at section .data into 0x102000
+    inc di
+    inc si                  ; TODO: Change this to use the rep instruction.
+    inc cx
+    cmp cx, data_section_size
+    jl .LOOP2       
+
+    mov di, 0x8000              ; Let's reset di to be 0x8000 where we loaded .data into upper mem.
+    add di, data_section_size   ; Let's skip past the actual data size to zero .bss
+
+    ; Zero BSS after .data section in second program header.
+    xor cx, cx
+.LOOP3:
+    mov byte [fs:di], 0
+    inc di
+    inc cx
+    cmp cx, bss_zero_size
+    jl .LOOP3
+
+    ret
