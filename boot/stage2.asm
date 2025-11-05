@@ -106,7 +106,7 @@ LOAD_KERNEL:
 kernel_entry_point: dd 0                           ; Entry point address defined in the elf header.
 text_rodata_size   equ 0x10f9
 data_section_size  equ 0x8fc                       ; If the FileSiz above changes, change this to it.
-bss_zero_size      equ 0x5878 - data_section_size  ; .data(MemSiz - FileSiz) = .bss
+bss_zero_size      equ 0x5678 - data_section_size  ; .data(MemSiz - FileSiz) = .bss
 ;
 PARSE_ELF_AND_RELOCATE:
     xor si, si              ; Set up destination segment:offset.
@@ -133,7 +133,7 @@ PARSE_ELF_AND_RELOCATE:
     jl .LOOP1
 
     mov si, 0x7000          ; This should be where our section .data starts after .text and .rodata
-    mov di, 0x8000          ; This should be where we load it into memory. fA00h:8000h = 0x103000
+    mov di, 0x8000          ; This should be where we load it into memory. fA00h:8000h = 0x102000
 
     ; Initialize second program header.
     xor cx, cx

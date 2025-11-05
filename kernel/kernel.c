@@ -4,9 +4,6 @@
 #include <heap.h>
 #include <string.h>
 
-extern uint8_t main_memory_index;
-extern memory_region_t available_memory_map[SMAP_entry_max];
-
 void kernel_main(uint8_t boot_drive)
 {
     // Initialize the heap with the largest block of available memory.
@@ -24,8 +21,5 @@ void kernel_main(uint8_t boot_drive)
 
     // ...
     asm volatile("sti");
-    for(;;)
-    {
-        continue; 
-    }
+    KERNEL_IDLE();
 }

@@ -2,60 +2,75 @@
 #include <vga.h>
 
 uint8_t main_memory_index;
-memory_region_t memory_map[SMAP_entry_max];
 memory_region_t available_memory_map[SMAP_entry_max];
 
-/* ... */
-void memory_map_init(uint16_t* mmap_desc_addr)
+/*
+* Initializes the system memory map.
+*
+* This function takes the memory map provided by the BIOS (via stage2.asm)
+* and parses it into a clean, kernel-usable array ('available_memory_map').
+*
+* It also finds the largest usable memory block in the first 4GB
+* and stores its index in 'main_memory_index' for the heap.
+*/
+void memory_map_init(mmap_descriptor_t* mmap_desc)
 {
     main_memory_index = 0;
-
-    // ...
-    uint32_t available_memory_size = 0;
     size_t mmap_avail_entry_count = 0;
 
-    // The first two bytes of the mmap are the size.
-    size_t num_entries = (uint16_t)mmap_desc_addr[0];
+    // Read the 32-bit entry count from the struct.
+    size_t num_entries = mmap_desc->count;
 
-    // Initialize the entry_array structure with the address of memory map form bios + size. 
-    struct SMAP_entry* entry_array = (struct SMAP_entry*)(mmap_desc_addr + 2);
-    for(size_t i=0; i<num_entries; i++)
+    // Get the address of the first entry from the struct.
+    struct SMAP_entry* entry_array = mmap_desc->entries;
+
+    // Parse BIOS entries and fill our global 'available_memory_map'
+    for(size_t i=0; i < num_entries; i++)
     {
         struct SMAP_entry* entry = &entry_array[i];
 
-        // If it's not available, let's just skip it.
+        // If it's not available (Type 1), skip it.
         if(entry->type != 0x01) { continue; }
 
         // ...
         if(mmap_avail_entry_count < SMAP_entry_max)
         {
-            // Let's fill in our global variable that kernel will use.
-            memory_map[mmap_avail_entry_count].base_low = entry->base_addr_low;
-            memory_map[mmap_avail_entry_count].base_high = entry->base_addr_high;
-            memory_map[mmap_avail_entry_count].length_low = entry->length_low;
-            memory_map[mmap_avail_entry_count].length_high = entry->length_high;
+            // FIX: Write directly into the 'available_memory_map'
+            available_memory_map[mmap_avail_entry_count].base_low = entry->base_addr_low;
+            available_memory_map[mmap_avail_entry_count].base_high = entry->base_addr_high;
+            available_memory_map[mmap_avail_entry_count].length_low = entry->length_low;
+            available_memory_map[mmap_avail_entry_count].length_high = entry->length_high;
             mmap_avail_entry_count += 1;          
         }
+        // TODO: Log an warning if we run out of SMAP_entry_max
     }
 
-    // Loop through available memory regions.
     uint32_t largest_base_size = 0;
-    for(size_t i=0; i<mmap_avail_entry_count; i++)
+    uint64_t total_memory_size = 0; // Use uint64_t for total memory calculation.
+
+    // Find the largest block for the heap and print all available regions.
+    for(size_t i = 0; i < mmap_avail_entry_count; i++)
     {
-        // Saving the index of the largest region to use for the heap or anything else that might need it.
-        if(memory_map[i].length_low > largest_base_size)
+        memory_region_t mmap_region = available_memory_map[i];
+
+        // FIX: This logic now correctly finds the largest memory block
+        //      that is *entirely within the first 4GB* (base_high == 0
+        //      and length_high == 0), which is what your 32-bit
+        //      heap_init function needs.
+        if(mmap_region.base_high == 0 && mmap_region.length_high == 0)
         {
-            largest_base_size = memory_map[i].length_low;
-            main_memory_index = i;
+            if(mmap_region.length_low > largest_base_size)
+            {
+                largest_base_size = mmap_region.length_low;
+                main_memory_index = i;
+            }
         }
 
-        // Let's fill in our global structure of available memory region addr and size.
-        available_memory_map[i] = memory_map[i];
-        available_memory_size  += (available_memory_map[i].length_low \
-                               +   available_memory_map[i].length_high);
+        // 64-bit arithmetic to calculate region size. (high_bits << 32) | low_bits
+        uint64_t region_size = ((uint64_t)mmap_region.length_high << 32) | mmap_region.length_low;
+        total_memory_size += region_size;
 
         // Now let's display available memory regions.
-        memory_region_t mmap_region = available_memory_map[i];
         vga_printh(mmap_region.base_high);
         vga_printh(mmap_region.base_low);
         vga_prints(" : ");
@@ -63,9 +78,8 @@ void memory_map_init(uint16_t* mmap_desc_addr)
         vga_printh(mmap_region.length_low);
         vga_printc('\n');
     }
-    vga_prints("Total Memory: ");
-    vga_printd(available_memory_size/(1024 * 1024));
-    vga_prints("MB\n");
 
-    return;
+    vga_prints("Total Memory: ");
+    vga_printd((uint32_t)(total_memory_size / (1024 * 1024)));
+    vga_prints("MB\n");
 }
