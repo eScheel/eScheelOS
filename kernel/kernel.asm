@@ -35,6 +35,7 @@ extern REMAP_PICS
 extern IDT_INIT
 extern timer_init
 extern keyboard_init
+extern heap_init
 extern kernel_main
 global KERNEL_IDLE
 global SYSTEM_HALT
@@ -42,26 +43,51 @@ global SYSTEM_HALT
 ;=============================================================================================
 
 KERNEL_INIT:
-    mov ebp, stack_top          ; Stack is located at the top of BSS and grows downward.
+    mov ebp, stack_top
     mov esp, ebp
-    mov [boot_drive], dl        ; Save some values passed from boot.bin and stage2.bin
+
+    ; Save some values passed from boot.bin and stage2.bin
+    mov [boot_drive], dl
     mov [video_mode], cl
     mov [mmap_desc_addr], bx
-    call GDT_REINIT                     ; Reinitialize the Global Descriptor Table.
-    call vga_init                       ; Initialize graphics array and print for success.
+
+    ; Reinitialize the Global Descriptor Table.
+    call GDT_REINIT
+
+    ; Initialize graphics array and print for success.
+    call vga_init
     push dword str_os_name
     call vga_prints
-    push dword str_mmap_init            ; Parse and take control of the memory map passed by BIOS.
+
+    ; Parse and take control of the memory map passed by BIOS.
+    push dword str_mmap_init
     call vga_prints
     xor  ebx, ebx
     mov  bx, word [mmap_desc_addr] 
     push ebx
-    call memory_map_init                ; This will print some useful values to the screen.
-    call REMAP_PICS                     ; Initialize interrupts and service routines.
+    call memory_map_init
+    push dword str_okay
+    call vga_prints
+
+    ; Initialize interrupts and service routines.
+    push dword str_intr_init
+    call vga_prints
+    call REMAP_PICS
     call IDT_INIT
     call timer_init
     call keyboard_init
+    push dword str_okay
+    call vga_prints  
+
+    ; Initialize the system heap.
+    push dword str_heap_init
+    call vga_prints
+    call heap_init
+    push dword str_okay
+    call vga_prints
+    
     ;TODO: PAGING. 
+
     xor  eax, eax
     mov  al, byte [boot_drive]
     push eax
@@ -87,7 +113,10 @@ SYSTEM_HALT:
 section .rodata
 
 str_os_name:   db "eScheel OS",0xa,0
-str_mmap_init: db "Initializing System Memory Map ...",0xa,0
+str_mmap_init: db "Initializing system memory map ... ",0
+str_intr_init: db "Initializing system interrupts ... ",0
+str_heap_init: db "Initializing system heap ... ",0
+str_okay:      db "[OK]",0xa,0
 str_halted:    db "System Halted ...",0
 
 ;=============================================================================================

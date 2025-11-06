@@ -71,15 +71,15 @@ void memory_map_init(mmap_descriptor_t* mmap_desc)
         total_memory_size += region_size;
 
         // Now let's display available memory regions.
-        vga_printh(mmap_region.base_high);
-        vga_printh(mmap_region.base_low);
-        vga_prints(" : ");
-        vga_printh(mmap_region.length_high);
-        vga_printh(mmap_region.length_low);
-        vga_printc('\n');
+        //vga_printh(mmap_region.base_high);
+        //vga_printh(mmap_region.base_low);
+        //vga_prints(":");
+        //vga_printh(mmap_region.length_high);
+        //vga_printh(mmap_region.length_low);
+        //vga_printc('\n');
     }
 
-    vga_prints("Total Memory: ");
-    vga_printd((uint32_t)(total_memory_size / (1024 * 1024)));
-    vga_prints("MB\n");
+    //vga_prints("Total Memory: ");
+    //vga_printd((uint32_t)(total_memory_size / (1024 * 1024)));
+    //vga_prints("MB\n");
 }

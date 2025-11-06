@@ -9,10 +9,12 @@ static uint32_t current_block_address; // This is our "high-water mark"
 // Define our alignment boundary
 #define HEAP_ALIGNMENT 8
 
-void heap_init(uint32_t base_addr, uint32_t length)
+void heap_init()
 {
     // For now we just allocate starting 1MB after the kernel offset.
-    base_addr += (1024 * 1024);
+    // TODO: Eventually account for base_high as well.
+    uint32_t base_addr = available_memory_map[main_memory_index].base_low;
+    base_addr += 0x100000;
 
     // Ensure the heap base itself is aligned to our 8-byte boundary
     if (base_addr % HEAP_ALIGNMENT != 0) 
@@ -20,8 +22,9 @@ void heap_init(uint32_t base_addr, uint32_t length)
         base_addr = (base_addr + (HEAP_ALIGNMENT - 1)) & ~(HEAP_ALIGNMENT - 1);
     }
 
-    // On a 512MB system, this will give us about 64MB for the heap.
-    length /= 8;
+    // Subtract what we added to get past the kernel from the full length.
+    // Then divide that by 8. This seems to give about 64MB on a 512MB system.
+    size_t length = ((available_memory_map[main_memory_index].length_low - 0x100000) / HEAP_ALIGNMENT);
 
     // ...
     system_heap.base = base_addr;
