@@ -445,3 +445,190 @@ PARSE_ELF_AND_RELOCATE:
     jl .LOOP3
 
     ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+kernel_entry_point:   dd 0          ; Entry point address defined in the elf header.
+program_header_count: dw 0          ; ...
+filesz: dw 0
+memsz:  dw 0
+bsssz:  dw 0
+physical_address: dd 0
+;
+PARSE_ELF_AND_RELOCATE:
+
+    ; This will be used to parse the headers.
+    xor si, si
+    mov gs, si
+    mov si, kernel_addr_tmp ; 4000h is where the LOAD_KERNEL routine loaded the kernel.
+
+    ; This will be used as the source address in lower mem.
+    xor bx, bx
+    mov es, bx
+    mov bx, kernel_addr_tmp + 0x1000    ; Skip past headers as well.
+
+    ; This will be used as the destination address in upper mem.
+    mov di, 0xfA00          ; Set up destination segment:offset.
+    mov fs, di
+    mov di, 0x6000          ; We are putting our kernel at 0x100000 or FA00:6000   
+
+    ; Check the magic to see if valid elf file.
+    mov al, byte [gs:si]
+    cmp al, 0x7f
+    jne ELF_PARSE_FAILED
+    mov al, byte [gs:si + 1]
+    cmp al, 'E'
+    jne ELF_PARSE_FAILED 
+    mov al, byte [gs:si + 2]
+    cmp al, 'L'
+    jne ELF_PARSE_FAILED
+    mov al, byte [gs:si + 3]
+    cmp al, 'F'
+    jne ELF_PARSE_FAILED
+
+    ; Get the kernel offset address address from the header.
+    mov  eax, [gs:si + ELF32_HDR.e_entry]
+    mov [kernel_entry_point], eax
+;    nop
+;    mov  dx, [kernel_entry_point + 2]
+;    call BIOS_PRINTH
+;    mov  dx, [kernel_entry_point]
+;    call BIOS_PRINTH
+;    mov  al, ' '
+;    call BIOS_PRINTC
+
+    ; Get the program header count.
+    mov dx, [gs:si + ELF32_HDR.e_phnum]
+    mov [program_header_count], dx
+;    nop
+;    call BIOS_PRINTH
+;    call BIOS_PRINTNL
+
+    ; Let's skip past the header now and start reading program headers.
+    add si, ELF32_HDR_size
+
+    ; Loop through each program header.
+    xor cx, cx
+PE_LOOP:
+    ; Check if PT_LOAD == 1
+    mov eax, [gs:si + ELF32_PHDR.p_type]
+    cmp eax, 1
+    jne SKIP_PH
+;    nop
+;    mov  dx, [gs:si + ELF32_PHDR.p_type]
+;    call BIOS_PRINTH
+;    mov  al, ' '
+;    call BIOS_PRINTC
+
+    ; For now we will just get lower 16bits of the memsz and filesz to fill in.
+    mov dx, word [gs:si + ELF32_PHDR.p_memsz]
+    mov [memsz], dx
+;    nop
+;    call BIOS_PRINTH
+;    mov  al, ' '
+;    call BIOS_PRINTC
+    ;
+    mov dx, word [gs:si + ELF32_PHDR.p_filesz]
+    mov [filesz], dx  
+;    nop
+;    call BIOS_PRINTH
+;    mov  al, ' '
+;    call BIOS_PRINTC
+
+    ; ...
+    mov eax, [gs:si + ELF32_PHDR.p_paddr]
+    mov [physical_address], eax
+
+    ; Write the bytes to the destination address.
+    push cx     ; Save cx since being used for program_header_count.
+    xor  cx, cx
+.LOOP:
+    mov al, byte [es:bx]
+    mov byte [fs:di], al    
+    inc di
+    inc bx                  ; TODO: Change this to use the rep instruction.
+    inc cx
+    cmp cx, word [memsz]
+    jl .LOOP
+    pop cx
+
+    ; Take away what the previous loop incremented for easier calculation.
+    sub bx, word [memsz]
+    sub di, word [memsz]
+;    nop
+;    mov  dx, bx
+;    call BIOS_PRINTH
+;    mov  al, ' '
+;    call BIOS_PRINTC
+;    mov  dx, di
+;    call BIOS_PRINTH
+;    mov  al, ' '
+;    call BIOS_PRINTC     
+
+    ; If filesz == memsz , we probably are not padded with zeros.
+    mov ax, [memsz]
+    cmp ax, [filesz]
+    je  SKIP_BSS
+    ; Let's get the difference and store it.
+    sub  ax, [filesz]
+    mov  [bsssz], ax
+;    nop
+;    mov  dx, [bsssz]
+;    call BIOS_PRINTH
+;    call BIOS_PRINTNL
+
+    ; Zero BSS ...
+    push di
+    push cx
+    xor  cx, cx
+    add  di, [filesz]   ; Let's skip past the actual data size to zero .bss
+.LOOP3:
+    mov byte [fs:di], 0
+    inc di
+    inc cx
+    cmp cx, [bsssz]
+    jl .LOOP3
+    pop cx
+    pop di
+
+SKIP_BSS:
+;    nop
+;    call BIOS_PRINTNL
+
+    ; For now we will just skip 0x2000 ahead as it seems the linker adds sections together in 2's.
+    ; Padded at 0x1000
+    ; Maybe I can use the offset and add that to bx and dx and subtract 0x1000?
+    add bx, 0x2000
+    add di, 0x2000
+
+    ; Skip to the next phdr.
+    add si, ELF32_PHDR_size
+
+    ; Check if we are out of phdrs.
+    inc cx
+    cmp cx, [program_header_count]
+    jl  PE_LOOP
+
+    ret
+
+SKIP_PH:
+    ; Skip to the next phdr.
+    add si, ELF32_PHDR_size
+
+    ; ...
+    inc cx
+    cmp cx, [program_header_count]
+    jl  PE_LOOP  
+
+    ret
