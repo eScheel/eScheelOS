@@ -141,3 +141,44 @@ void vga_update_hud()
 
 	hud_active = 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+        vga_prints("\n\n\n\n\n\n\n\n\n\n\n\n");       
+        vga_prints("EAX: ");
+        vga_printh(r->eax);
+        vga_printc('\n');
+        vga_prints("EBX: ");
+        vga_printh(r->ebx);
+        vga_printc('\n');
+        vga_prints("ECX: ");
+        vga_printh(r->ecx);
+        vga_printc('\n');
+        vga_prints("EDX: ");
+        vga_printh(r->edx);
+        vga_printc('\n');
+        vga_prints("ESP: ");
+        vga_printh(r->esp);
+        vga_printc('\n');
+        vga_prints("EBP: ");
+        vga_printh(r->ebp);
+        vga_printc('\n');
+        vga_prints("ESI: ");
+        vga_printh(r->esi);
+        vga_printc('\n');
+        vga_prints("EDI: ");
+        vga_printh(r->edi);
+        vga_printc('\n');
+        vga_prints("EIP: ");
+        vga_printh(r->eip);
+        vga_printc('\n');

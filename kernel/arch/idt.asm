@@ -9,45 +9,56 @@ section .text
 
 global IDT_INIT
 global IDT_SET_GATE     
-
 extern CODE_SEG
+extern ISR_0
+extern ISR_1
+extern ISR_2
+extern ISR_3
+extern ISR_4
+extern ISR_5
+extern ISR_6
+extern ISR_7
+extern ISR_8
+extern ISR_9
+extern ISR_10
+extern ISR_11
+extern ISR_12
+extern ISR_13
+extern ISR_14
+extern ISR_15
+extern ISR_16
+extern ISR_17
+extern ISR_18
 extern ISR_STUB
+extern ISR_ROUTINES
 extern IRQ0_HANDLER      
 extern IRQ1_HANDLER
 
 ;=============================================================================================
 
 IDT_INIT:
-    mov  ecx, 256               ; Set up a loop to initialize all 256 IDT entries with a common stub.
-    mov  eax, ISR_STUB          ; EAX will hold the address of the default "catch-all" handler.
-.LOOP:
-    dec  ecx                ; Decrement our interrupt number.
-    
-    ; Prepare to call IDT_SET_GATE(interrupt_number, handler_address)
-    ; The cdecl calling convention pushes arguments onto the stack from right to left.
-    push ecx                ; Push the first argument (interrupt_number), which is our counter (ECX).
-    push eax                ; Push the second argument (handler_address), which is in EAX.
+
+    ; Loop through first 32 ISRs and set the exceptions.
+    xor  ecx, ecx
+    mov  edx, ISR_ROUTINES
+.ISR_LOOP:
+    mov  eax, [edx]     ; Get the current ISR_ROUTINE
+    push ecx            ; Push the number.
+    push eax            ; Push the address.
     call IDT_SET_GATE
-    
-    ; --- Clean up the stack after the call ---
-    ; We pushed EAX and ECX (8 bytes total), but IDT_SET_GATE
-    ; doesn't clean up its own stack arguments (per cdecl).
-    ; We can't just use `add esp, 8` here because we need the values
-    ; back in their registers for the loop.
-    pop  eax                ; Restore the handler address to EAX for the next loop iteration.
-    pop  ecx                ; Restore the counter to ECX.
-    test ecx, ecx           ; Check if ECX is zero.
-    jnz .LOOP
+    pop  eax
+    pop  ecx
+    ;
+    add  edx, 4         ; Each ISR_ROUTINE is a double word.
+    inc  ecx
+    cmp  ecx, 31        ; Exceptions are 0 - 31.
+    jl  .ISR_LOOP
 
-    ; Loop is finished, all 256 entries now point to isr_stub.
-
-    ; Now, we override a specific entry for the keyboard (IRQ 1).
-    ; After remapping, IRQ 1 becomes interrupt number 33 (0x20 + 1).
-
+    ; Now, we manually set for the(IRQS 32-48).
     push dword 32
     push dword IRQ0_HANDLER ; PIT
     call IDT_SET_GATE
-
+    ;
     push dword 33
     push dword IRQ1_HANDLER ; KBD
     call IDT_SET_GATE

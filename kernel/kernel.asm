@@ -1,13 +1,13 @@
 ;   eScheelOS
 ;
-;   kentry.asm
+;   kernel.asm
 ;
 ;   Author: Jacob Scheel
 ;
 ;   This code will do the following:
 ;       1) Setup the stack and store the boot drive number and the current video mode passed by stage2. 
 ;       2) Reinitialize our own GDT, VGA, System Memory Map, and IDT / ISRs / IRQs.
-;       3) Initialize Paging and then call kernel_main to take control.
+;       3) Initialize Heap and Paging, and then call kernel_main to take control.
 ;
 [bits 32]
 
@@ -43,6 +43,10 @@ global SYSTEM_HALT
 ;=============================================================================================
 
 KERNEL_INIT:
+    cli     ; stage2.asm should of done this for us.
+    cld     ; boot.asm should of done this for us.
+
+    ; Setup our main kernel stack.
     mov ebp, stack_top
     mov esp, ebp
 
@@ -86,14 +90,11 @@ KERNEL_INIT:
     push dword str_okay
     call vga_prints
     
-    ;TODO: PAGING. 
+    ; Initialize system paging.
+    push dword str_page_init
+    call vga_prints 
 
-    xor  eax, eax
-    mov  al, byte [boot_drive]
-    push eax
-    call kernel_main
-
-;=============================================================================================
+    sti     ; Probably good to enable interrupts now.
 
 KERNEL_IDLE:
 .LOOP:
@@ -113,9 +114,10 @@ SYSTEM_HALT:
 section .rodata
 
 str_os_name:   db "eScheel OS",0xa,0
-str_mmap_init: db "Initializing system memory map ... ",0
-str_intr_init: db "Initializing system interrupts ... ",0
+str_mmap_init: db "Initializing bios memory map ... ",0
+str_intr_init: db "Initializing interrupts ... ",0
 str_heap_init: db "Initializing system heap ... ",0
+str_page_init: db "Initializing system paging ... ",0
 str_okay:      db "[OK]",0xa,0
 str_halted:    db "System Halted ...",0
 

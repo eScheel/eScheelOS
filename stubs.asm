@@ -632,3 +632,158 @@ SKIP_PH:
     jl  PE_LOOP  
 
     ret
+
+
+
+
+
+
+
+
+    mov  ecx, 256               ; Set up a loop to initialize all 256 IDT entries with a common stub.
+    mov  eax, ISR_STUB          ; EAX will hold the address of the default "catch-all" handler.
+.LOOP:
+    dec  ecx                ; Decrement our interrupt number.
+    
+    ; Prepare to call IDT_SET_GATE(interrupt_number, handler_address)
+    ; The cdecl calling convention pushes arguments onto the stack from right to left.
+    push ecx                ; Push the first argument (interrupt_number), which is our counter (ECX).
+    push eax                ; Push the second argument (handler_address), which is in EAX.
+    call IDT_SET_GATE
+    
+    ; Clean up the stack after the call.
+    ; We pushed EAX and ECX (8 bytes total), but IDT_SET_GATE
+    ; doesn't clean up its own stack arguments (per cdecl).
+    ; We can't just use `add esp, 8` here because we need the values
+    ; back in their registers for the loop.
+    pop  eax                ; Restore the handler address to EAX for the next loop iteration.
+    pop  ecx                ; Restore the counter to ECX.
+    test ecx, ecx           ; Check if ECX is zero.
+    jnz .LOOP
+
+    ; Loop is finished, all 256 entries now point to isr_stub.
+
+
+
+
+
+ISR_STUB:
+    pusha                   ; Save all general-purpose registers (eax, ecx, etc.)
+
+    push dword str_unhandled
+    call vga_prints         ; Print "Unhandled Interrupt!"
+    add  esp, 4             ; Clean up stack
+
+    ; This is a stub, so we still need to send an EOI (End of Interrupt) just in case this was a hardware interrupt.
+    ; For now we will just send the ACK to both PICs.
+    mov al, 0x20
+    out 0x20, al            ; EOI to PIC1
+    out 0xA0, al            ; EOI to PIC2
+
+    popa                    ; Restore all registers
+    iret                    ; Return from interrupt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    mov  ecx, 0
+    mov  eax, ISR_0
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 1
+    mov  eax, ISR_1
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 2
+    mov  eax, ISR_2
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 3
+    mov  eax, ISR_3
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 4
+    mov  eax, ISR_4
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 5
+    mov  eax, ISR_5
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 6
+    mov  eax, ISR_6
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 7
+    mov  eax, ISR_7
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 8
+    mov  eax, ISR_8
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 9
+    mov  eax, ISR_9
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 10
+    mov  eax, ISR_10
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 11
+    mov  eax, ISR_11
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 12
+    mov  eax, ISR_12
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 0
+    mov  eax, ISR_0
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 0
+    mov  eax, ISR_0
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 0
+    mov  eax, ISR_0
+    push ecx
+    push eax
+    call IDT_SET_GATE
+    mov  ecx, 0
+    mov  eax, ISR_0
+    push ecx
+    push eax
+    call IDT_SET_GATE
+
+
+
+
+
+    
