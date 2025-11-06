@@ -308,7 +308,7 @@ GDT_DESC:
 msg_invalid_elf: db 'error: Failed to locate a valid elf file.',0
 
 BITS32:
-    mov  ebp, 0x4000          ; Setup temporary stack for kernel.
+    mov  ebp, 0x4000    ; Setup temporary stack for 32bit stub.
     call PARSE_ELF_AND_RELOCATE
 
     ; Pass boot drive and default video mode to kernel.
@@ -319,6 +319,7 @@ BITS32:
     mov cl, [video_mode]      ; Pass default video mode to kernel.
     mov bx,  MMAP_DESC        ; Pass memory map buffer address to kernel.
 
+    ; ...
     mov eax, [kernel_entry_point]
     jmp EAX
 

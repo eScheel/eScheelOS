@@ -11,7 +11,7 @@ global ISR_STUB
 
 extern vga_prints
 
-;; isr_stub: Our generic, "catch-all" isr handler
+; isr_stub: Our generic, "catch-all" isr handler
 ISR_STUB:
     pusha                   ; Save all general-purpose registers (eax, ecx, etc.)
 

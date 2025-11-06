@@ -20,13 +20,14 @@ void heap_init(uint32_t base_addr, uint32_t length)
         base_addr = (base_addr + (HEAP_ALIGNMENT - 1)) & ~(HEAP_ALIGNMENT - 1);
     }
 
-    size_t len = (length/2);
+    // On a 512MB system, this will give us about 64MB for the heap.
+    length /= 8;
 
     // ...
-    system_heap.base      = base_addr;
-    system_heap.size      = len;
-    system_heap.used      = 0;
-    system_heap.end       = base_addr + len;
+    system_heap.base = base_addr;
+    system_heap.size = length;
+    system_heap.used = 0;
+    system_heap.end  = base_addr + length;
 
     // ...
     memset((uint32_t*)system_heap.base, 0, system_heap.size);
@@ -40,9 +41,9 @@ void print_heap_info()
     vga_printh(system_heap.base);
     vga_prints("h  ");
     vga_printd(system_heap.size/(1024*1024));
-    vga_prints("MB    ");
-    vga_printd(((system_heap.size-system_heap.used)/(1024*1024)));
     vga_prints("MB     ");
+    vga_printd(((system_heap.size-system_heap.used)/(1024*1024)));
+    vga_prints("MB      ");
     vga_printd(system_heap.used/(1024*1024));
     vga_prints("MB     ");
     vga_printh(system_heap.end);
