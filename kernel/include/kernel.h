@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 
-// MMAP.C
+// MMAP.C ==============================================================
 #define SMAP_entry_max 32
 struct SMAP_entry {
     uint32_t base_addr_low;
@@ -31,11 +31,24 @@ typedef struct {
     struct SMAP_entry entries[SMAP_entry_max];
 }__attribute__((packed)) mmap_descriptor_t;
 
-// KERNEL.ASM
+// HEAP.C ==============================================================
+struct HEAP_info {
+    uint32_t base;
+    uint32_t size;
+    uint32_t used;
+    uint32_t end;
+}__attribute__((packed));
+
+void print_heap_info();
+
+void* malloc(size_t sz);
+void  free(void* b);
+
+// KERNEL.ASM =========================================================
 extern void KERNEL_IDLE();
 extern void SYSTEM_HALT();
 
-// IO.ASM
+// IO.ASM =============================================================
 extern uint8_t INB(uint8_t);
 extern void   OUTB(uint16_t, uint8_t);
 

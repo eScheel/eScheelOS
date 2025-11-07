@@ -7,7 +7,7 @@
 ;   This code will do the following:
 ;       1) Setup the stack and store the boot drive number and the current video mode passed by stage2. 
 ;       2) Reinitialize our own GDT, VGA, System Memory Map, and IDT / ISRs / IRQs.
-;       3) Initialize Heap and Paging, and then call kernel_main to take control.
+;       3) Initialize Heap and Paging, and then enable interrups and wait in a loop.
 ;
 [bits 32]
 
@@ -36,7 +36,8 @@ extern IDT_INIT
 extern timer_init
 extern keyboard_init
 extern heap_init
-extern kernel_main
+extern malloc
+extern timer_wait
 global KERNEL_IDLE
 global SYSTEM_HALT
 
@@ -62,6 +63,7 @@ KERNEL_INIT:
     call vga_init
     push dword str_os_name
     call vga_prints
+    add  esp, 4
 
     ; Parse and take control of the memory map passed by BIOS.
     push dword str_mmap_init
@@ -72,6 +74,7 @@ KERNEL_INIT:
     call memory_map_init
     push dword str_okay
     call vga_prints
+    add  esp, 12
 
     ; Initialize interrupts and service routines.
     push dword str_intr_init
@@ -81,7 +84,8 @@ KERNEL_INIT:
     call timer_init
     call keyboard_init
     push dword str_okay
-    call vga_prints  
+    call vga_prints
+    add  esp, 8
 
     ; Initialize the system heap.
     push dword str_heap_init
@@ -89,15 +93,24 @@ KERNEL_INIT:
     call heap_init
     push dword str_okay
     call vga_prints
+    add  esp, 8
     
     ; Initialize system paging.
     push dword str_page_init
-    call vga_prints 
+    call vga_prints
+    ; TODO:
+    add  esp, 4
 
-    sti     ; Probably good to enable interrupts now.
+    sti             ; Probably good to enable interrupts now.
 
 KERNEL_IDLE:
 .LOOP:
+    push dword 0
+    call timer_wait
+    push dword [system_uptime_seconds]
+    call vga_printd
+
+    add  esp, 8
     jmp .LOOP
 
 ;=============================================================================================
@@ -124,6 +137,7 @@ str_halted:    db "System Halted ...",0
 ;=============================================================================================
 section .data
 
+extern system_uptime_seconds
 boot_drive: db 0
 video_mode: db 0
 mmap_desc_addr: dw 0

@@ -1,5 +1,4 @@
 #include <kernel.h>
-#include <heap.h>
 #include <vga.h>
 #include <string.h>
 
