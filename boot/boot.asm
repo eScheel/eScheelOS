@@ -108,6 +108,26 @@ ERROR:
     jmp .LOOP   ; Incase a NMI fires.
 
 ;=============================================================================================
-
-times 510-($-$$) db 0
-dw 0xAA55
+; MBR Partition Table
+; We must pad our code from its end ($) up to the partition table offset (446 decimal, or 0x1BE).
+times 446-($-$$) db 0
+; Dummy Partition Table (64 bytes total)
+; Partition 1 (16 bytes): Our "bootable" partition
+db 0x80                 ; 0x1BE: Bootable Flag (0x80 = Active)
+db 0x00                 ; 0x1BF: Starting Head (CHS)
+db 0x01                 ; 0x1C0: Starting Sector (CHS)
+db 0x00                 ; 0x1C1: Starting Cylinder (CHS)
+db 0x0C                 ; 0x1C2: Partition Type (0x0C = "FAT32 LBA", but any non-zero is fine)
+db 0x00                 ; 0x1C3: Ending Head (CHS)
+db 0x00                 ; 0x1C4: Ending Sector (CHS)
+db 0x00                 ; 0x1C5: Ending Cylinder (CHS)
+dd 1                    ; 0x1C6: LBA Start of Partition (stage2.bin is at sector 1)
+dd 100000               ; 0x1CA: Partition Size in Sectors (100,000 sectors, ~50MB, just a dummy value)
+; Partition 2 (16 bytes)
+times 16 db 0
+; Partition 3 (16 bytes)
+times 16 db 0
+; Partition 4 (16 bytes)
+times 16 db 0
+;
+dw 0xAA55   ; BIOS MAGIC

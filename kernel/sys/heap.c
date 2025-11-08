@@ -12,8 +12,7 @@ void heap_init()
 {
     // For now we just allocate starting 1MB after the kernel offset.
     // TODO: Eventually account for base_high as well.
-    uint32_t base_addr = available_memory_map[main_memory_index].base_low;
-    base_addr += 0x100000;
+    uint32_t base_addr = KERNEL_PHYSICAL_BASE + 0x100000;
 
     // Ensure the heap base itself is aligned to our 8-byte boundary
     if (base_addr % HEAP_ALIGNMENT != 0) 
@@ -23,7 +22,8 @@ void heap_init()
 
     // Subtract what we added to get past the kernel from the full length.
     // Then divide that by 8. This seems to give about 64MB on a 512MB system.
-    size_t length = ((available_memory_map[main_memory_index].length_low - 0x100000) / HEAP_ALIGNMENT);
+    //size_t length = ((available_memory_map[main_memory_index].length_low - 0x100000) / HEAP_ALIGNMENT);
+    size_t length = 0x100000;
 
     // ...
     system_heap.base = base_addr;
@@ -39,15 +39,15 @@ void heap_init()
 /* ... */
 void print_heap_info()
 {
-    vga_prints("offset     size     avail     used    top\n");
+    vga_prints("offset        size      avail      used         top\n");
     vga_printh(system_heap.base);
     vga_prints("h  ");
-    vga_printd(system_heap.size/(1024*1024));
-    vga_prints("MB     ");
-    vga_printd(((system_heap.size-system_heap.used)/(1024*1024)));
-    vga_prints("MB      ");
-    vga_printd(system_heap.used/(1024*1024));
-    vga_prints("MB     ");
+    vga_printd(system_heap.size);
+    vga_prints("     ");
+    vga_printd(system_heap.size-system_heap.used);
+    vga_prints("     ");
+    vga_printd(system_heap.used);
+    vga_prints("     ");
     vga_printh(system_heap.end);
     vga_prints("h\n");
 }

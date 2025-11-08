@@ -35,14 +35,13 @@ void memory_map_init(mmap_descriptor_t* mmap_desc)
         // ...
         if(mmap_avail_entry_count < SMAP_entry_max)
         {
-            // FIX: Write directly into the 'available_memory_map'
+            // Write directly into the 'available_memory_map'
             available_memory_map[mmap_avail_entry_count].base_low = entry->base_addr_low;
             available_memory_map[mmap_avail_entry_count].base_high = entry->base_addr_high;
             available_memory_map[mmap_avail_entry_count].length_low = entry->length_low;
             available_memory_map[mmap_avail_entry_count].length_high = entry->length_high;
             mmap_avail_entry_count += 1;          
         }
-        // TODO: Log an warning if we run out of SMAP_entry_max
     }
 
     uint32_t largest_base_size = 0;
@@ -77,6 +76,20 @@ void memory_map_init(mmap_descriptor_t* mmap_desc)
         //vga_printh(mmap_region.length_high);
         //vga_printh(mmap_region.length_low);
         //vga_printc('\n');
+    }
+
+    /* 
+     * I've tried to extern kernel_offset from link.ld, but it does not seem to have the correct value.
+     * Our boot loader will load the kernel at 0x100000 anyway ... So we test if main_memory_offset equals.
+     */
+    if(available_memory_map[main_memory_index].base_low != KERNEL_PHYSICAL_BASE)
+    {
+        vga_prints("\nmain_memory_offest(0x");
+        vga_printh(available_memory_map[main_memory_index].base_low);
+        vga_prints(") != kernel_offset(0x100000)\n");
+
+        // For now we just halt, eventually we will remap ...
+        SYSTEM_HALT();
     }
 
     //vga_prints("Total Memory: ");

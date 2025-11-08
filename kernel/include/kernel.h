@@ -44,6 +44,28 @@ void print_heap_info();
 void* malloc(size_t sz);
 void  free(void* b);
 
+// PAGING.C ============================================================
+#define PAGE_SIZE 4096
+
+// Page Directory Entry (PDE) Flags.
+#define PDE_PRESENT     0x01    // 1 = Page table is present
+#define PDE_READ_WRITE  0x02    // 1 = Read/Write, 0 = Read-only
+#define PDE_USER        0x04    // 1 = User-mode, 0 = Supervisor-mode
+#define PDE_4MB_PAGE    0x80    // 1 = Page is 4MB, 0 = Page is 4KB
+
+// Page Table Entry (PTE) Flags.
+#define PTE_PRESENT     0x01    // 1 = Page is present
+#define PTE_READ_WRITE  0x02    // 1 = Read/Write, 0 = Read-only
+#define PTE_USER        0x04    // 1 = User-mode, 0 = Supervisor-mode
+
+/*
+ * The reason we use 0xC0000000 by convention is to create a "Higher-Half Kernel." 
+ * This reserves the entire "lower half" of the virtual address space (from 0x0 to 0xBFFFFFFF) for future user-mode programs,
+ * preventing their addresses from ever colliding with the kernel's.
+ */
+#define KERNEL_VIRTUAL_BASE  0x00100000
+#define KERNEL_PHYSICAL_BASE 0x00100000     // As defined in link.ld
+
 // KERNEL.ASM =========================================================
 extern void KERNEL_IDLE();
 extern void SYSTEM_HALT();

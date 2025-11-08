@@ -528,3 +528,5 @@ HALT32:
 .LOOP:    
     hlt
     jmp  .LOOP      ; Just incase a nmi hits.
+
+times 4096-($-$$) db 0
