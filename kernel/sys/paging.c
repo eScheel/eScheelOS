@@ -16,13 +16,14 @@
 static uint32_t page_directory[1024] __attribute__((aligned(PAGE_SIZE)));
 
 /*
- * A Page Table for the first 4MB of memory (0x0 - 0x3FFFFF)
- * This table is used for the *identity mapping*. It will be pointed to by page_directory[0].
+ * We are just going to identity map everything to keep things simple.
+ * Also for now we just map the first 16MB.
  */
 static struct page_tables {
     uint32_t page_table_ident0[1024] __attribute__((aligned(PAGE_SIZE)));
     uint32_t page_table_ident1[1024] __attribute__((aligned(PAGE_SIZE)));
     uint32_t page_table_ident2[1024] __attribute__((aligned(PAGE_SIZE)));
+    uint32_t page_table_ident3[1024] __attribute__((aligned(PAGE_SIZE)));
 } pts;
 
 /*
@@ -38,33 +39,40 @@ void paging_init()
 {
     // Clear all page structures to zero.
     // This ensures all "Present" bits are 0 by default.
-    memset(page_directory,   0, sizeof(page_directory));
-    //memset(page_table_ident, 0, sizeof(page_table_ident));
+    memset(page_directory, 0, sizeof(page_directory));
+    memset(&pts, 0, sizeof(pts));
 
-    // Create the Identity Mapping (0x0 -> 0x0).
-    // This maps the first 4MB of virtual memory to the first 4MB of physical memory.
-    // This is CRITICAL for VGA (at 0xB8000) and for the code that runs *immediately* after paging is enabled.
-    for (size_t page_num = 0; page_num < 1024; page_num++)
+    // Page Table 0 (0MB - 4MB)
+    uint32_t physical_addr;
+    for (size_t i = 0; i < 1024; i++)
     {
-        uint32_t physical_addr = page_num * PAGE_SIZE;
-        pts.page_table_ident0[page_num] = physical_addr | PTE_PRESENT | PTE_READ_WRITE;
-        pts.page_table_ident1[page_num] = physical_addr | PTE_PRESENT | PTE_READ_WRITE;
-        pts.page_table_ident2[page_num] = physical_addr | PTE_PRESENT | PTE_READ_WRITE;
+        physical_addr = 0x0 + (i * PAGE_SIZE);
+        pts.page_table_ident0[i] = physical_addr | PTE_PRESENT | PTE_READ_WRITE;
+
+        physical_addr = 0x400000 + (i * PAGE_SIZE);
+        pts.page_table_ident1[i] = physical_addr | PTE_PRESENT | PTE_READ_WRITE;
+        
+        physical_addr = 0x800000 + (i * PAGE_SIZE);
+        pts.page_table_ident2[i] = physical_addr | PTE_PRESENT | PTE_READ_WRITE;
+        
+        physical_addr = 0xC00000 + (i * PAGE_SIZE);
+        pts.page_table_ident3[i] = physical_addr | PTE_PRESENT | PTE_READ_WRITE;        
     }
 
     // Link the Page Directory to the Page Tables.
     // Get the physical addresses of our static page tables.
-    // Since this C code is running *before* paging, any
-    // C symbol address like `&page_table_low` *is* the physical address.
-    uint32_t phys_addr0  = (uint32_t)&pts.page_table_ident0;
-    uint32_t phys_addr1  = (uint32_t)&pts.page_table_ident1;
-    uint32_t phys_addr2  = (uint32_t)&pts.page_table_ident2;
+    // TODO: Eventually figure out how to loop this.
+    uint32_t phys_addr[4];
+    phys_addr[0] = (uint32_t)&pts.page_table_ident0;
+    phys_addr[1] = (uint32_t)&pts.page_table_ident1;
+    phys_addr[2] = (uint32_t)&pts.page_table_ident2;
+    phys_addr[3] = (uint32_t)&pts.page_table_ident3;
 
-    // Map Virtual 0x00000000 -> page_table_low
-    page_directory[0] = phys_addr0 | PDE_PRESENT | PDE_READ_WRITE;  // 0x00000000
-    page_directory[1] = phys_addr1 | PDE_PRESENT | PDE_READ_WRITE;  // 0x00400000
-    page_directory[2] = phys_addr2 | PDE_PRESENT | PDE_READ_WRITE;  // 0x00800000
-
+    // Map the tables.
+    for(size_t i=0; i<4; i++)
+    {
+        page_directory[i] = phys_addr[i] | PDE_PRESENT | PDE_READ_WRITE;
+    }
 
     // Store the physical address of the Page Directory
     page_dir_phys_addr = (uint32_t*)&page_directory;

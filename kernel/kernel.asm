@@ -95,10 +95,10 @@ KERNEL_INIT:
     call vga_prints
     add  esp, 4
     call paging_init
-    mov eax, [page_dir_phys_addr]    ; Load the new Page Directory
+    mov eax, [page_dir_phys_addr]
     mov cr3, eax
     mov eax, cr0
-    or  eax, 0x80000000              ; Enable the PG (Paging) bit in CR0
+    or  eax, 0x80000000     ; Enable the PG (Paging) bit in CR0
     mov cr0, eax
     jmp .AFTER_PAGING
 .AFTER_PAGING:

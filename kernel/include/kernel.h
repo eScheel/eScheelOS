@@ -59,9 +59,7 @@ void  free(void* b);
 #define PTE_USER        0x04    // 1 = User-mode, 0 = Supervisor-mode
 
 /*
- * The reason we use 0xC0000000 by convention is to create a "Higher-Half Kernel." 
- * This reserves the entire "lower half" of the virtual address space (from 0x0 to 0xBFFFFFFF) for future user-mode programs,
- * preventing their addresses from ever colliding with the kernel's.
+ * For now we are just identity mapping to keep things simple.
  */
 #define KERNEL_VIRTUAL_BASE  0x00100000
 #define KERNEL_PHYSICAL_BASE 0x00100000     // As defined in link.ld
