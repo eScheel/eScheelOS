@@ -10,9 +10,11 @@ section .text
 global REMAP_PICS
 global IRQ1_HANDLER
 global IRQ0_HANDLER
+global IRQ14_HANDLER
 
 extern keyboard_interrupt_handler
 extern timer_interrupt_handler
+extern ide_interrupt_handler
 
 ;=============================================================================================
 ;
@@ -42,14 +44,11 @@ REMAP_PICS:
     out 0x21, al      
     out 0xa1, al
 
-    ; Mask all interrupts.
-    mov al, 0xff
-    out 0x21, al      
-    out 0xa1, al
-
-    ; Unmask used interrupts.
-    mov al, 0xfc        ; 11111100b. IRQ , KBD
-    out 0x21, al        ; Send new mask to PIC1
+    ; Mask interrupts accordingly.
+    mov al, 0xfc        ; 11111100b.
+    out 0x21, al        ; Send mask to PIC1
+    mov al, 0xdf        ; 11011111b.
+    out 0xa1, al        ; Send mask to PIC2
 
     ret
 
@@ -66,11 +65,21 @@ IRQ0_HANDLER:
     iret
 
 ; This is the handler for IRQ 1 (keyboard)
-; After remapping, it's at IDT entry 33 (0x21)
 IRQ1_HANDLER:
     pusha                               ; Save all general-purpose registers
     call keyboard_interrupt_handler 
     mov al, 0x20                        ; ACK PIC1 for the interrupt to stop firing.
+    out 0x20, al
+    popa                                ; Restore all registers
+    iret                                ; Return from interrupt
+
+; This is the handler for IRQ 14 (primary ata)
+IRQ14_HANDLER:
+    pusha                               ; Save all general-purpose registers
+    call ide_interrupt_handler
+    mov al, 0xa0                        ; ACK PIC2 for the interrupt to stop firing.
+    out 0xa0, al
+    mov al, 0x20                        ; ACK PIC1 either way.
     out 0x20, al
     popa                                ; Restore all registers
     iret                                ; Return from interrupt

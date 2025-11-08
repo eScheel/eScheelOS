@@ -1,16 +1,8 @@
 #include <kernel.h>
 #include <vga.h>
 
-struct registers
-{
-  uint32_t gs, fs, es, ds;
-  uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
-  uint32_t int_no, err_code;
-  uint32_t eip, cs, eflags, useresp, ss;
-};
-
 // Array of exception messages.
-const char *exception_messages[] = {
+const char *exception_messages[32] = {
     "Division By Zero",
     "Debug",
     "Non Maskable Interrupt",
@@ -43,6 +35,14 @@ const char *exception_messages[] = {
     "Reserved",
     "Reserved",
     "Reserved"
+};
+
+struct registers
+{
+  uint32_t gs, fs, es, ds;
+  uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
+  uint32_t int_no, err_code;
+  uint32_t eip, cs, eflags, useresp, ss;
 };
 
 /* ... */

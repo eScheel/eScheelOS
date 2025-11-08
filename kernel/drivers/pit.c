@@ -50,6 +50,7 @@ void timer_wait(uint32_t sec)
     timer_counter = sec;
     asm volatile("sti");
     while(timer_counter) { 
-          continue; 
+        asm volatile("hlt");
+        continue;
     }
 }

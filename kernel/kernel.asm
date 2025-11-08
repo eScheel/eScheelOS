@@ -1,14 +1,3 @@
-;   eScheelOS
-;
-;   kernel.asm
-;
-;   Author: Jacob Scheel
-;
-;   This code will do the following:
-;       1) Setup the stack and store the boot drive number and the current video mode passed by stage2. 
-;       2) Reinitialize our own GDT, VGA, System Memory Map, and IDT / ISRs / IRQs.
-;       3) Initialize Heap and Paging, and then enable interrups and wait in a loop.
-;
 [bits 32]
 
 section .note.GNU-stack
@@ -35,12 +24,13 @@ extern main_memory_index
 extern REMAP_PICS
 extern IDT_INIT
 extern timer_init
+extern timer_wait
 extern keyboard_init
 extern paging_init
 extern heap_init
 extern print_heap_info
 extern malloc
-extern timer_wait
+extern ide_init
 global KERNEL_IDLE
 global SYSTEM_HALT
 
@@ -95,13 +85,14 @@ KERNEL_INIT:
     call vga_prints
     add  esp, 4
     call paging_init
-    mov eax, [page_dir_phys_addr]
-    mov cr3, eax
-    mov eax, cr0
-    or  eax, 0x80000000     ; Enable the PG (Paging) bit in CR0
-    mov cr0, eax
+    mov  eax, [page_dir_phys_addr]
+    mov  cr3, eax
+    mov  eax, cr0
+    or   eax, 0x80000000     ; Enable the PG (Paging) bit in CR0
+    mov  cr0, eax
     jmp .AFTER_PAGING
 .AFTER_PAGING:
+    ; No need to remap anything since we are 1:1 page mapping.
     push dword str_okay
     call vga_prints
     add  esp, 4
@@ -110,6 +101,14 @@ KERNEL_INIT:
     push dword str_heap_init
     call vga_prints
     call heap_init
+    push dword str_okay
+    call vga_prints
+    add  esp, 8
+
+    ; Initialize the IDE driver.
+    push dword str_ide_init
+    call vga_prints
+    call ide_init
     push dword str_okay
     call vga_prints
     add  esp, 8
@@ -140,6 +139,7 @@ str_mmap_init: db "Initializing bios memory map ... ",0
 str_intr_init: db "Initializing interrupts ... ",0
 str_page_init: db "Initializing system paging ... ",0
 str_heap_init: db "Initializing system heap ... ",0
+str_ide_init:  db "Initializing ide driver ... ",0
 str_okay:      db "[OK]",0xa,0
 str_halted:    db "System Halted ...",0
 

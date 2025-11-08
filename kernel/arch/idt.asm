@@ -33,6 +33,7 @@ extern ISR_STUB
 extern ISR_ROUTINES
 extern IRQ0_HANDLER      
 extern IRQ1_HANDLER
+extern IRQ14_HANDLER
 
 ;=============================================================================================
 
@@ -56,14 +57,19 @@ IDT_INIT:
 
     ; Now, we manually set for the(IRQS 32-48).
     push dword 32
-    push dword IRQ0_HANDLER ; PIT
+    push dword IRQ0_HANDLER     ; PIT
     call IDT_SET_GATE
+    add  esp, 8
     ;
     push dword 33
-    push dword IRQ1_HANDLER ; KBD
+    push dword IRQ1_HANDLER     ; KBD
     call IDT_SET_GATE
-
-    add  esp, 16            ; Clean up the 16 bytes (4 dwords) we pushed for these calls.
+    add  esp, 8
+    ;
+    push dword 46
+    push dword IRQ14_HANDLER    ; Primary ATA
+    call IDT_SET_GATE
+    add esp, 8
 
     lidt[IDT_DESC]          ; All entries are set. Load the IDT Register (IDTR) with the address and size of our new IDT. The CPU will now use this table.
     ret
@@ -80,8 +86,8 @@ IDT_SET_GATE:
     mov  ebx, [ebp + 8]     ; Get the handler address (arg 1)
     
     ; Each IDT entry is 8 bytes, so we multiply the number by 8
-    shl  eax, 3             ; eax = eax * 8
-    add  eax, IDT_PTR       ; eax is now the address of the correct IDT_ENTRY
+    shl  eax, 3                     ; eax = eax * 8
+    add  eax, IDT_PTR               ; eax is now the address of the correct IDT_ENTRY
     mov  [eax], bx                  ; [eax + 0] = offset_low (lower 16 bits of handler address)    
     mov  word [eax + 2], CODE_SEG   ; [eax + 2] = selector (our GDT code segment selector)
     mov  byte [eax + 4], 0          ; [eax + 4] = zero (must be 0)

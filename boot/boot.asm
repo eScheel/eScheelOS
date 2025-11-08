@@ -104,7 +104,7 @@ STAGE2_FAILED:
 ERROR:
     cli         ; Disable Interrupts.
 .LOOP:
-    hlt         ; Stop execution.
+    hlt         ; Put the CPU to sleep.
     jmp .LOOP   ; Incase a NMI fires.
 
 ;=============================================================================================

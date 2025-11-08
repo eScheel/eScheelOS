@@ -8,8 +8,8 @@
 ;       1) Store the boot drive number passed by boot.bin
 ;       2) Check and enable A20 using two of three methods. ; TODO: Eventually verify that A20 is actually enabled.
 ;       3) Initialize video mode and memory map from BIOS.
-;       4) Load kernel code at address 4000h parse and relocate to 100000h.   (Seems more simple than parsing from uppermem.)
-;       5) Bootstrap and then jump to kernel.elf
+;       4) Load kernel code at address 4000h parse and bootstrap to 32bits.
+;       5) Parse and relocate elf executable to 100000h and then jump to kernel.elf
 ;
 ;   TODO: Write a file system driver to load a kernel from a data region as opposed to flat sectors.
 ;
