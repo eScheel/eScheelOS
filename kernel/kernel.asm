@@ -30,6 +30,7 @@ extern paging_init
 extern heap_init
 extern print_heap_info
 extern malloc
+extern pci_init
 extern ide_init
 global KERNEL_IDLE
 global SYSTEM_HALT
@@ -97,10 +98,20 @@ KERNEL_INIT:
     call vga_prints
     add  esp, 4
 
+    sti             ; Probably ok to enable interrupts now.
+
     ; Initialize the system heap.
     push dword str_heap_init
     call vga_prints
     call heap_init
+    push dword str_okay
+    call vga_prints
+    add  esp, 8
+
+    ; Initialize the PCI driver.
+    push dword str_pci_init
+    call vga_prints
+    call pci_init
     push dword str_okay
     call vga_prints
     add  esp, 8
@@ -112,8 +123,6 @@ KERNEL_INIT:
     push dword str_okay
     call vga_prints
     add  esp, 8
-
-    sti             ; Probably good to enable interrupts now.
 
 KERNEL_IDLE:
 .LOOP:
@@ -139,6 +148,7 @@ str_mmap_init: db "Initializing bios memory map ... ",0
 str_intr_init: db "Initializing interrupts ... ",0
 str_page_init: db "Initializing system paging ... ",0
 str_heap_init: db "Initializing system heap ... ",0
+str_pci_init:  db "Initializing pci config ... ",0
 str_ide_init:  db "Initializing ide driver ... ",0
 str_okay:      db "[OK]",0xa,0
 str_halted:    db "System Halted ...",0

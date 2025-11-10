@@ -5,6 +5,4 @@
 #include <stdint.h>
 #include <stdarg.h>
 
-
-
 #endif // __IDE_H

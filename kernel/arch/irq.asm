@@ -47,7 +47,7 @@ REMAP_PICS:
     ; Mask interrupts accordingly.
     mov al, 0xfc        ; 11111100b.
     out 0x21, al        ; Send mask to PIC1
-    mov al, 0xdf        ; 11011111b.
+    mov al, 0xbf        ; 10111111b.
     out 0xa1, al        ; Send mask to PIC2
 
     ret
@@ -77,7 +77,7 @@ IRQ1_HANDLER:
 IRQ14_HANDLER:
     pusha                               ; Save all general-purpose registers
     call ide_interrupt_handler
-    mov al, 0xa0                        ; ACK PIC2 for the interrupt to stop firing.
+    mov al, 0x20                        ; ACK PIC2 for the interrupt to stop firing.
     out 0xa0, al
     mov al, 0x20                        ; ACK PIC1 either way.
     out 0x20, al

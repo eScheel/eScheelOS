@@ -19,8 +19,8 @@ stage2_sect equ 2           ; Sector Offset.
 
 boot_drive: db  0
 
-msg_disk_reset_failed: db 'error: Failed resetting drive.'
-msg_stage2_failed:     db 'error: Failed loading stage2.'
+msg_disk_reset_failed: db 'error: Failed resetting drive.',0
+msg_stage2_failed:     db 'error: Failed loading stage2.',0
 
 ;=============================================================================================
 
@@ -40,8 +40,7 @@ ENTRY:
     mov  ah, 0x00	            ; Disk reset function.
     mov  dl, [boot_drive]
     int  0x13
-    jc  .FAILED
-    jmp .STAGE2
+    jnc .STAGE2
 .FAILED:
     inc  cx
     cmp  cx, 2                  ; Let's give it 3 retries.

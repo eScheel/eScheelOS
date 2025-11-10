@@ -61,15 +61,19 @@ void  free(void* b);
 /*
  * For now we are just identity mapping to keep things simple.
  */
-#define KERNEL_VIRTUAL_BASE  0x00100000
 #define KERNEL_PHYSICAL_BASE 0x00100000     // As defined in link.ld
+#define KERNEL_VIRTUAL_BASE KERNEL_PHYSICAL_BASE
 
 // KERNEL.ASM =========================================================
 extern void KERNEL_IDLE();
 extern void SYSTEM_HALT();
 
 // IO.ASM =============================================================
-extern uint8_t INB(uint8_t);
-extern void   OUTB(uint16_t, uint8_t);
+extern uint8_t  INB(uint16_t);
+extern void     OUTB(uint16_t, uint8_t);
+extern uint16_t INW(uint16_t);
+extern void     OUTW(uint16_t, uint16_t);
+extern uint32_t INL(uint16_t);
+extern void     OUTL(uint16_t, uint32_t);
 
 #endif // __KERNEL_H
