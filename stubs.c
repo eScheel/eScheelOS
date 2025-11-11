@@ -182,3 +182,70 @@ void vga_update_hud()
         vga_prints("EIP: ");
         vga_printh(r->eip);
         vga_printc('\n');
+
+
+
+
+
+
+    /* ... */
+void probe_devices()
+{
+    vga_printc('\n');
+    for(int bus = 0; bus < 256; bus++)
+    {
+        for(int slot = 0; slot < 32; slot++)
+        {
+            for(int func = 0; func < 8; func++)
+            {
+                uint32_t reg0 = pci_conf_read_dword(bus, slot, func, 0x00);
+                
+                if(reg0 != 0xFFFFFFFF)
+                {
+                    // Device found! Store its bus, slot, and func.
+                    // You can then read other registers (like 0x08)
+                    // to find its Class Code and find out if it's a
+                    // network card, storage controller, etc.
+                    //vga_prints("Found device at ");
+                    vga_printd(bus);
+                    vga_prints(" ");
+                    vga_printd(slot);
+                    vga_prints(" ");
+                    vga_printd(func);
+                    vga_prints("  ");
+
+                    // Get the lower 16 bits
+                    uint16_t vendorID = (reg0 & 0x0000FFFF);
+                    
+                    // Get the upper 16 bits (by right-shifting)
+                    uint16_t deviceID = (reg0 >> 16);
+
+                    vga_printh(vendorID);   // (For example, Vendor 0x8086 is Intel, Vendor 0x10DE is NVIDIA)
+                    vga_prints(" "); 
+                    vga_printh(deviceID);
+                    vga_prints("  ");
+
+                    // --- NEW CODE: Read Register 0x08 ---
+                    uint32_t reg8 = pci_conf_read_dword(bus, slot, func, 0x08);
+
+                    // Extract the class, subclass, prog IF, and revision
+                    uint8_t class  = (reg8 >> 24) & 0xFF;
+                    uint8_t subclass   = (reg8 >> 16) & 0xFF;
+                    uint8_t progif     = (reg8 >> 8)  & 0xFF;
+                    //uint8_t revisionID = reg8 & 0xFF; // Not as useful, but good to know
+
+                    // Print the new info
+                    vga_printh(class);
+                    vga_prints(" ");
+                    vga_printh(subclass);
+                    vga_prints(" ");
+                    vga_printh(progif);
+
+                    vga_printc('\n');
+
+                    timer_wait(1);
+                }
+            }
+        }
+    }
+}

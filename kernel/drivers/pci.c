@@ -2,6 +2,9 @@
 #include <pci.h>
 #include <vga.h>
 #include <pit.h>
+#include <string.h>
+
+struct _pci_device_hdr pci_device_hdr[256];
 
 /* ... */
 uint32_t pci_conf_read_dword(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset) 
@@ -13,12 +16,12 @@ uint32_t pci_conf_read_dword(uint8_t bus, uint8_t slot, uint8_t func, uint8_t of
     |      |        |         |         |         |          +-- Must be 00 (for 32-bit alignment)
     |      |        |         |         |         +------------- Register Offset (0x00, 0x04, 0x08, etc.)
     |      |        |         |         +----------------------- Function Number (0-7)
-    |      |        |         +------------------------------- Device/Slot Number (0-31)
-    |      |        +----------------------------------------- Bus Number (0-255)
-    |      +-------------------------------------------------- Reserved (Must be 0)
-    +--------------------------------------------------------- Enable Bit (Must be 1)
+    |      |        |         +--------------------------------- Device/Slot Number (0-31)
+    |      |        +------------------------------------------- Bus Number (0-255)
+    |      +---------------------------------------------------- Reserved (Must be 0)
+    +----------------------------------------------------------- Enable Bit (Must be 1)
     */ 
-    uint32_t address = 0x80000000;      // Start with the Enable Bit (Bit 31)
+    uint32_t address = 0x80000000;      // Start with the Enable Bit set. (Bit 31)
     address |= ((uint32_t)bus << 16);   // Add the Bus number (left-shifted 16 bits)
     address |= ((uint32_t)slot << 11);  // Add the Slot number (left-shifted 11 bits)
     address |= ((uint32_t)func << 8);   // Add the Function number (left-shifted 8 bits)
@@ -32,48 +35,107 @@ uint32_t pci_conf_read_dword(uint8_t bus, uint8_t slot, uint8_t func, uint8_t of
 }
 
 /* ... */
-void check_for_device()
+void pci_probe_devices()
 {
-    vga_printc('\n');
-    for (int bus = 0; bus < 256; bus++)
+    memset(&pci_device_hdr, 0, sizeof(struct _pci_device_hdr)*256);
+
+    size_t index = 0;
+
+    for(uint32_t bus = 0; bus < 256; bus++)
     {
-        for (int slot = 0; slot < 32; slot++)
+        for(uint32_t slot = 0; slot < 32; slot++)
         {
-            for (int func = 0; func < 8; func++)
+            for(uint32_t func = 0; func < 8; func++)
             {
                 uint32_t reg0 = pci_conf_read_dword(bus, slot, func, 0x00);
-                if (reg0 != 0xFFFFFFFF)
+                
+                // ...
+                if(reg0 != 0xFFFFFFFF || index > 255)
                 {
-                    // Device found! Store its bus, slot, and func.
-                    // You can then read other registers (like 0x08)
-                    // to find its Class Code and find out if it's a
-                    // network card, storage controller, etc.
-                    vga_prints("Found device at ");
-                    vga_printd(bus);
-                    vga_prints(" ");
-                    vga_printd(slot);
-                    vga_prints(" ");
-                    vga_printd(func);
-                    vga_prints("  ");
+                    // ...
+                    uint32_t regC = pci_conf_read_dword(bus, slot, func, 0x0c);
+                    pci_device_hdr[index].hdr_type = (regC >> 16) & 0xff;
 
-                    // Get the lower 16 bits
-                    uint16_t vendorID = (reg0 & 0x0000FFFF);
-                    
-                    // Get the upper 16 bits (by right-shifting)
-                    uint16_t deviceID = (reg0 >> 16);
+                    // ...
+                    if(pci_device_hdr[index].hdr_type != 0)
+                    {
+                        continue;
+                    }
 
-                    vga_printh(vendorID);   // (For example, Vendor 0x8086 is Intel, Vendor 0x10DE is NVIDIA)
-                    vga_prints("  "); 
-                    vga_printh(deviceID);
-                    vga_printc('\n');
+                    // ...
+                    uint32_t reg0 = pci_conf_read_dword(bus, slot, func, 0x00);
+                    pci_device_hdr[index].device_id = (reg0 & 0xffff);
+                    pci_device_hdr[index].vendor_id = (reg0 >> 16);
+
+                    // ...
+                    uint32_t reg4 = pci_conf_read_dword(bus, slot, func, 0x04);
+                    pci_device_hdr[index].status  = (reg4 & 0xffff);
+                    pci_device_hdr[index].command = (reg4 >> 16);
+
+                    // ...
+                    uint32_t reg8 = pci_conf_read_dword(bus, slot, func, 0x08);
+                    pci_device_hdr[index].class_code  = (reg8 >> 24) & 0xff;
+                    pci_device_hdr[index].subclass    = (reg8 >> 16) & 0xff;
+                    pci_device_hdr[index].prog_if     = (reg8 >> 8)  & 0xff;
+                    pci_device_hdr[index].revision_id = (reg8 & 0xff);
+
+                    // ...
+                    pci_device_hdr[index].bist            = (regC >> 24) & 0xff;
+                    pci_device_hdr[index].latency_timer   = (regC >> 8)  & 0xff;
+                    pci_device_hdr[index].cache_line_size = (regC & 0xff);
+
+                    // ...
+                    pci_device_hdr[index].bar0 = pci_conf_read_dword(bus, slot, func, 0x10);
+                    pci_device_hdr[index].bar1 = pci_conf_read_dword(bus, slot, func, 0x14);
+                    pci_device_hdr[index].bar2 = pci_conf_read_dword(bus, slot, func, 0x18);
+                    pci_device_hdr[index].bar3 = pci_conf_read_dword(bus, slot, func, 0x1c);
+                    pci_device_hdr[index].bar4 = pci_conf_read_dword(bus, slot, func, 0x20);
+                    pci_device_hdr[index].bar5 = pci_conf_read_dword(bus, slot, func, 0x24);
+
+                    /* TODO: Finish the rest before interrupts. */
+
+                    // ...
+                    uint32_t reg3C = pci_conf_read_dword(bus, slot, func, 0x3c);
+                    /* TODO: max_latency , min_grant */
+                    pci_device_hdr[index].int_pin  = (reg3C >> 8) & 0xff;
+                    pci_device_hdr[index].int_line = (reg3C & 0xff);
+
+
+                    // Is it an IDE?
+                    if(pci_device_hdr[index].class_code == 1 && pci_device_hdr[index].subclass == 1)
+                    {
+                        vga_prints("\nIDE: ");
+                        vga_printd(bus);
+                        vga_prints(" ");
+                        vga_printd(slot);
+                        vga_prints(" ");
+                        vga_printd(func);
+                        vga_prints("  ");
+                        vga_printh(pci_device_hdr[index].prog_if);
+                        vga_prints("  ");
+                        vga_printh(pci_device_hdr[index].bar4);
+                        vga_prints("  ");
+                        vga_printh(pci_device_hdr[index].int_pin);
+                        vga_prints("  ");
+                        vga_printh(pci_device_hdr[index].int_line);
+                        vga_prints("\n");
+                    }
+                    /*
+                    else if(class == 2 && subclass == 0)
+                    {
+                        vga_prints("NIC Controller detected: ");
+                        vga_printd(bus);
+                        vga_prints(" ");
+                        vga_printd(slot);
+                        vga_prints(" ");
+                        vga_printd(func);
+                        vga_prints("\n");
+                        type = 2;                        
+                    }
+                    */
+                    index++;
                 }
             }
         }
     }
-}
-
-/* ... */
-void pci_init()
-{
-    check_for_device();
 }
