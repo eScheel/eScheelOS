@@ -39,17 +39,21 @@ void pci_probe_devices()
 {
     memset(&pci_device_hdr, 0, sizeof(struct _pci_device_hdr)*256);
 
+    // Index to be used for enumerating pci headers.
     size_t index = 0;
 
+    // Full scan of all busses.
     for(uint32_t bus = 0; bus < 256; bus++)
     {
+        // ...
         for(uint32_t slot = 0; slot < 32; slot++)
         {
+            // ...
             for(uint32_t func = 0; func < 8; func++)
             {
                 uint32_t reg0 = pci_conf_read_dword(bus, slot, func, 0x00);
                 
-                // ...
+                // If register 0 is all ones, it means nothing is present.
                 if(reg0 != 0xFFFFFFFF || index > 255)
                 {
                     // ...
@@ -99,40 +103,8 @@ void pci_probe_devices()
                     /* TODO: max_latency , min_grant */
                     pci_device_hdr[index].int_pin  = (reg3C >> 8) & 0xff;
                     pci_device_hdr[index].int_line = (reg3C & 0xff);
-
-
-                    // Is it an IDE?
-                    if(pci_device_hdr[index].class_code == 1 && pci_device_hdr[index].subclass == 1)
-                    {
-                        vga_prints("\nIDE: ");
-                        vga_printd(bus);
-                        vga_prints(" ");
-                        vga_printd(slot);
-                        vga_prints(" ");
-                        vga_printd(func);
-                        vga_prints("  ");
-                        vga_printh(pci_device_hdr[index].prog_if);
-                        vga_prints("  ");
-                        vga_printh(pci_device_hdr[index].bar4);
-                        vga_prints("  ");
-                        vga_printh(pci_device_hdr[index].int_pin);
-                        vga_prints("  ");
-                        vga_printh(pci_device_hdr[index].int_line);
-                        vga_prints("\n");
-                    }
-                    /*
-                    else if(class == 2 && subclass == 0)
-                    {
-                        vga_prints("NIC Controller detected: ");
-                        vga_printd(bus);
-                        vga_prints(" ");
-                        vga_printd(slot);
-                        vga_prints(" ");
-                        vga_printd(func);
-                        vga_prints("\n");
-                        type = 2;                        
-                    }
-                    */
+                    
+                    // ...
                     index++;
                 }
             }

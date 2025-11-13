@@ -147,7 +147,7 @@ str_mmap_init: db "Initializing bios memory map ... ",0
 str_intr_init: db "Initializing interrupts ... ",0
 str_page_init: db "Initializing system paging ... ",0
 str_heap_init: db "Initializing system heap ... ",0
-str_pci_probe: db "Probing for pci device controllers ... ",0
+str_pci_probe: db "Initializing pci devices ... ",0
 str_ide_init:  db "Initializing ide driver ... ",0
 str_okay:      db "[OK]",0xa,0
 str_halted:    db "System Halted ...",0

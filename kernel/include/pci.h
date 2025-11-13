@@ -42,4 +42,6 @@ struct _pci_device_hdr {
     uint8_t  int_line;
 }__attribute__((packed));
 
+extern struct _pci_device_hdr pci_device_hdr[];
+
 #endif  // __PCI_H
