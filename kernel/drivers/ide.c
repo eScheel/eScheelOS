@@ -5,12 +5,21 @@
 #include <string.h>
 #include <pit.h> // For timer_wait
 
-// --- Globals to store our port addresses ---
-// As your pci_init notes, 0x8A means legacy mode,
 // so we can safely hard-code these.
 static uint16_t ide_data_port     = 0x1F0; // Primary Bus
-//static uint16_t ide_control_port  = 0x3F6; // Primary Bus
+static uint16_t ide_control_port  = 0x3F6; // Primary Bus
 //static uint16_t ide_irq           = 14;
+
+struct ata_identify ata_ident;
+
+/* Waits ~400ns by reading the alternate status port 4 times. */
+static void ide_delay_400ns()
+{
+    INB(ide_control_port + ATA_REG_ALT_STATUS);
+    INB(ide_control_port + ATA_REG_ALT_STATUS);
+    INB(ide_control_port + ATA_REG_ALT_STATUS);
+    INB(ide_control_port + ATA_REG_ALT_STATUS);
+}
 
 /* Helper function to wait for the drive to be ready */
 static int ide_wait_for_ready()
@@ -54,6 +63,10 @@ static int ide_wait_for_drq()
     return 0;
 }
 
+/* 
+ * Initialize IDE drives. 
+ * For now this will only initialize the first ide_drive we see. 
+ */
 void ide_init()
 {
     int device_found = 0;
@@ -76,12 +89,13 @@ void ide_init()
     // ...
     if(!device_found) 
     {
-        vga_prints("\nNo Legacy IDE controller found!\n");
+        vga_prints("No Legacy IDE controller found.\n");
         SYSTEM_HALT();
     }
 
     // 1. Select the Master drive
     OUTB(ide_data_port + ATA_REG_DRIVE, ATA_SELECT_MASTER);
+    ide_delay_400ns();
     
     // 2. Reset sector counts and LBA registers (set to 0)
     OUTB(ide_data_port + ATA_REG_SECCOUNT, 0);
@@ -91,64 +105,69 @@ void ide_init()
     
     // 3. Send the IDENTIFY command
     OUTB(ide_data_port + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
+    ide_delay_400ns();
     
     // 4. Check the status port
     uint8_t status = INB(ide_data_port + ATA_REG_STATUS);
     if (status == 0) 
     {
-        vga_prints("\nDrive does not exist.\n");
+        vga_prints("Drive does not exist.\n");
         SYSTEM_HALT();
     }
 
     // 5. Wait for BSY to clear
-    while(INB(ide_data_port + ATA_REG_STATUS) & ATA_SR_BSY) {}
+    while(INB(ide_data_port + ATA_REG_STATUS) & ATA_SR_BSY) { continue; }
 
     // 6. Check for LBA_MID or LBA_HIGH non-zero, which means it's not ATA
     if(INB(ide_data_port + ATA_REG_LBA_MID)  != 0 \
     || INB(ide_data_port + ATA_REG_LBA_HIGH) != 0)
     {
-        vga_prints("\nNot an ATA drive.\n");
+        vga_prints("Not an ATA drive.\n");
         SYSTEM_HALT();
     }
 
     // 7. Wait for DRQ or ERR
     while(!((status = INB(ide_data_port + ATA_REG_STATUS)) & ATA_SR_DRQ) \
-       && !(status & ATA_SR_ERR)) {}
-
+       && !((status & ATA_SR_ERR))) { continue; }
     if(status & ATA_SR_ERR)
     {
-        vga_prints("\nError during IDENTIFY.\n");
+        vga_prints("Error with identifying the drive.\n");
         SYSTEM_HALT();
     }
 
-    // 8. Data is ready! Read 256 16-bit words
+    // Create a buffer to get the ident data from the drive.
     uint16_t identify_buffer[256];
     memset(identify_buffer, 0, sizeof(identify_buffer));
+
+    // Loop through the 512 byte block in 16bit increments.
     for (int i = 0; i < 256; i++) 
     {
-        // We use your INW function for 16-bit reads.
+        // Read from the data register port.
         identify_buffer[i] = INW(ide_data_port + ATA_REG_DATA);
     }
 
-    /*char *d = (char*)malloc(1024);
-    memset(d, 0, 1024);
-    ide_read_sectors(2, 1, d);
-    for(int i=0; i<1024; i++)
-    {
-        vga_printc(d[i]);
-    }
-    free(d);*/
+    // Let's use the buffer we just captured to fill in our ident structure.
+    memset(&ata_ident, 0, sizeof(struct ata_identify));
+    memcpy(identify_buffer, &ata_ident, sizeof(struct ata_identify));
 
-    //ide_write_sectors(0, 1, "This is a test string ...");
+    // Check if bit 9 of capabilites is set for LBA28.
+    if(ata_ident.capabilities & 0x200)
+    {
+        //vga_prints((char*)ata_ident.model_string);
+        //vga_printd(ata_ident.total_sectors_28bit);
+        return;
+    }
+    else
+    {
+        vga_prints("LBA28 not supported!\n");
+        SYSTEM_HALT();
+    }
 }
 
 
 /*
- * Reads `num_sectors` from `lba` into `buffer`.
- * This uses Polling PIO.
- * Returns 0 on success, -1 on failure.
- * NOTE: This is a very simple, unsafe implementation.
- * It does not handle IRQs and blocks the whole CPU.
+ * Reads num_sectors from lba into buffer. This uses Polling PIO.
+ * This is a very simple, unsafe implementation. It does not handle IRQs and blocks the whole CPU.
  */
 int ide_read_sectors(uint32_t lba, uint8_t num_sectors, void* buffer)
 {
@@ -161,12 +180,13 @@ int ide_read_sectors(uint32_t lba, uint8_t num_sectors, void* buffer)
     // 1. Select drive (Master) and set LBA mode
     //    The 0xE0 sends 1110 (LBA mode) + Master Drive bits
     OUTB(ide_data_port + ATA_REG_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));
+    ide_delay_400ns();
     
     // 2. Send sector count
     OUTB(ide_data_port + ATA_REG_SECCOUNT, num_sectors);
     
-    // 3. Send LBA address (in 3 parts)
-    OUTB(ide_data_port + ATA_REG_LBA_LOW,  (uint8_t)(lba & 0xFF));
+    // 3. Send LBA28 address (in 3 parts)
+    OUTB(ide_data_port + ATA_REG_LBA_LOW,  (uint8_t)((lba & 0xFF)));
     OUTB(ide_data_port + ATA_REG_LBA_MID,  (uint8_t)((lba >> 8) & 0xFF));
     OUTB(ide_data_port + ATA_REG_LBA_HIGH, (uint8_t)((lba >> 16) & 0xFF));
     
@@ -196,13 +216,7 @@ int ide_read_sectors(uint32_t lba, uint8_t num_sectors, void* buffer)
     return 0;
 }
 
-/*
- * Writes `num_sectors` from `lba` from `buffer`.
- *
- * *** CAUTION: THIS IS DANGEROUS! ***
- * A bug here can (and likely will) corrupt your disk or filesystem.
- * Be 100% sure you know what LBA you are writing to.
- */
+/* Writes num_sectors from lba from buffer. */
 int ide_write_sectors(uint32_t lba, uint8_t num_sectors, void* buffer)
 {
     // Wait for the drive to be ready
@@ -213,11 +227,12 @@ int ide_write_sectors(uint32_t lba, uint8_t num_sectors, void* buffer)
 
     // 1. Select drive (Master) and set LBA mode
     OUTB(ide_data_port + ATA_REG_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));
+    ide_delay_400ns();
     
     // 2. Send sector count
     OUTB(ide_data_port + ATA_REG_SECCOUNT, num_sectors);
     
-    // 3. Send LBA address (in 3 parts)
+    // 3. Send LBA28 address (in 3 parts)
     OUTB(ide_data_port + ATA_REG_LBA_LOW,  (uint8_t)(lba & 0xFF));
     OUTB(ide_data_port + ATA_REG_LBA_MID,  (uint8_t)((lba >> 8) & 0xFF));
     OUTB(ide_data_port + ATA_REG_LBA_HIGH, (uint8_t)((lba >> 16) & 0xFF));

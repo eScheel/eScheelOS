@@ -249,3 +249,38 @@ void probe_devices()
         }
     }
 }
+
+
+
+
+
+
+
+    /*char *d = (char*)malloc(1024);
+    memset(d, 0, 1024);
+    ide_read_sectors(2, 1, d);
+    for(int i=0; i<1024; i++)
+    {
+        vga_printc(d[i]);
+    }
+    free(d);*/
+
+    //ide_write_sectors(0, 1, "This is a test string ...");
+
+
+
+
+
+
+
+        // Check if bit 9 of capabilites is set for LBA28.
+    if(ata_ident.capabilities & 0x200)
+    {
+        // We do support LBA28.
+        return;
+    }
+    else
+    {
+        vga_prints("LBA28 not supported!\n");
+        SYSTEM_HALT();
+    }

@@ -215,7 +215,7 @@ BIOS_MEMORY_MAP:
     xor ebx, ebx         ; EBX must be 0 for the first call.
     xor bp, bp           ; BP will count the number of valid entries
     mov di, MMAP_DESC    ; Point DI to the start of the entries array. ES is 0.
-    add di, 4           ; I guess if we don't do this then int 15 gets stuck? Need to pass count anyway.
+    add di, 4            ; I guess if we don't do this then int 15 gets stuck? Need to pass count anyway.
 .LOOP:
     mov eax, 0xE820                         ; E820 function number.
     mov edx, 0x534D4150                     ; Magic number 'SMAP'

@@ -40,34 +40,38 @@
 
 // --- New IDENTIFY structure ---
 // Represents the 512-byte data block returned by ATA_CMD_IDENTIFY
-struct ata_identify_device {
+struct ata_identify {
     uint16_t config;                // Word 0
     uint16_t cylinders;             // Word 1
     uint16_t reserved2;             // Word 2
     uint16_t heads;                 // Word 3
-    uint16_t reserved4;             // Word 4
-    uint16_t reserved5;             // Word 5
+    uint16_t unformat_spt;          // Word 4
+    uint16_t unformat_bps;          // Word 5
     uint16_t sectors_per_track;     // Word 6
     uint16_t reserved7;             // Word 7
     uint16_t reserved8;             // Word 8
+    uint16_t reserved9;             // Word 9
     uint16_t serial_number[10];     // Word 10-19
-    uint16_t reserved20;            // Word 20
-    uint16_t reserved21;            // Word 21
-    uint16_t reserved22;            // <-- ADD THIS MISSING WORD
+    uint16_t buffer_type;           // Word 20
+    uint16_t buffer_size;           // Word 21
+    uint16_t ecc_bytes_avail;       // Word 22
     uint16_t firmware_revision[4];  // Word 23-26
     uint16_t model_string[20];      // Word 27-46 (40 bytes)
     uint16_t reserved47;            // Word 47
-    uint16_t reserved48;            // Word 48
+    uint16_t doubleword;            // Word 48
     uint16_t capabilities;          // Word 49 (Bit 9 = LBA support)
     uint16_t reserved50;            // Word 50
     uint16_t pio_timing_mode;       // Word 51
-    uint16_t reserved52;            // Word 52
+    uint16_t dma_timing_mode;       // Word 52
     uint16_t valid_fields;          // Word 53
-    uint16_t reserved54_58[5];      // Word 54-58
+    uint16_t current_cylinders;     // Word 54
+    uint16_t current_heads;         // Word 55
+    uint16_t current_spt;           // Word 56
+    uint16_t current_capacity[2];   // Word 57-58
     uint16_t reserved59;            // Word 59
     uint32_t total_sectors_28bit;   // Word 60-61 (32-bit value)
     uint16_t reserved62_82[21];     // Word 62-82
-    uint16_t command_sets_supported; // Word 83 (Bit 10 = LBA48 support)
+    uint16_t command_sets_supported;// Word 83 (Bit 10 = LBA48 support)
     uint16_t reserved84_99[16];     // Word 84-99
     uint64_t total_sectors_48bit;   // Word 100-103 (64-bit value)
     // ... (the rest is irrelevant for now) ...
