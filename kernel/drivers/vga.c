@@ -11,14 +11,17 @@ static uint16_t* terminal_buffer = (uint16_t*)VGA_MEMORY;
 
 size_t vga_get_x()
 {
-	//size_t ret = vga.cursor_x;
 	return(vga.cursor_x);
 }
 
 size_t vga_get_y()
 {
-	//size_t ret = vga.cursor_y;
 	return(vga.cursor_y);
+}
+
+void vga_set_color(uint8_t c)
+{
+	vga.color = c;
 }
 
 /* Initialize the vga memory. */
@@ -36,6 +39,7 @@ void vga_init()
 		}
 	}
 
+	// Reset cursor position.
     vga.cursor_y = 0;
     vga.cursor_x = 0;
     return;
@@ -90,6 +94,26 @@ static void vga_scroll()
 		vga.cursor_y = VGA_HEIGHT - 1;
 		vga.cursor_x = 0;
 	}
+}
+
+/* ... */
+void vga_clear()
+{
+	// Clear the screen.
+	for(vga.cursor_y = 0; vga.cursor_y < VGA_HEIGHT; vga.cursor_y++) 
+    {
+		for(vga.cursor_x = 0; vga.cursor_x < VGA_WIDTH; vga.cursor_x++) 
+        {
+			const size_t index = vga.cursor_y * VGA_WIDTH + vga.cursor_x;
+			terminal_buffer[index] = (uint16_t)' ' | (uint16_t)(vga.color << 8);
+		}
+	}
+
+	// Reset cursor position.
+    vga.cursor_y = 0;
+    vga.cursor_x = 0;
+	vga_update_cursor();
+    return;
 }
 
 /* ... */

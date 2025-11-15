@@ -1,5 +1,5 @@
 #ifndef __KERNEL_H
-#define __KERNEL_H
+#define __KERNEL_H  1
 
 #include <stddef.h>
 #include <stdint.h>
@@ -39,9 +39,9 @@ struct HEAP_info {
     uint32_t end;
 }__attribute__((packed));
 
-void print_heap_info();
-void* malloc(size_t sz);
-void  free(void* b);
+extern void print_heap_info();
+extern void* malloc(size_t);
+extern void  free(void*);
 
 // PAGING.C ============================================================
 #define PAGE_SIZE 4096
@@ -64,7 +64,6 @@ void  free(void* b);
 #define KERNEL_VIRTUAL_BASE KERNEL_PHYSICAL_BASE
 
 // KERNEL.ASM =========================================================
-extern void KERNEL_IDLE();
 extern void SYSTEM_HALT();
 
 // IO.ASM =============================================================
@@ -74,5 +73,9 @@ extern uint16_t INW(uint16_t);
 extern void     OUTW(uint16_t, uint16_t);
 extern uint32_t INL(uint16_t);
 extern void     OUTL(uint16_t, uint32_t);
+
+// IO.C ===============================================================
+extern void kgets(char *);
+extern void kprintf(const char *, ...);
 
 #endif // __KERNEL_H

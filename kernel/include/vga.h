@@ -1,5 +1,5 @@
 #ifndef __VGA_H
-#define __VGA_H
+#define __VGA_H     1
 
 #include <stddef.h>
 #include <stdint.h>
@@ -11,15 +11,18 @@
 
 #define LOADING_SYMBOL  0xff
 
-size_t vga_get_x();
-size_t vga_get_y();
+extern size_t vga_get_x();
+extern size_t vga_get_y();
+extern void vga_set_color(uint8_t);
 
-void vga_putc(char c, size_t x, size_t y);
-void vga_puts(const char *s, size_t x, size_t y);
+extern void vga_clear();
 
-void vga_printc(char);
-void vga_prints(const char*);
-void vga_printd(uint32_t);
-void vga_printh(uint32_t);
+extern void vga_putc(char, size_t, size_t);
+extern void vga_puts(const char*, size_t, size_t);
+
+extern void vga_printc(char);
+extern void vga_prints(const char*);
+extern void vga_printd(uint32_t);
+extern void vga_printh(uint32_t);
 
 #endif // __VGA_H

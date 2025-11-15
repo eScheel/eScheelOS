@@ -21,7 +21,7 @@
 #define right_shift_released    0xb6
 #define caps_lock_released      0xba
 
-extern char input_buffer[];
-extern size_t buffer_index;
+extern char keyboard_input_buffer[];
+extern size_t keyboard_buffer_index;
 
 #endif // __KEYBOARD_H

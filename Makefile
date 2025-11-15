@@ -24,10 +24,12 @@ kernel:
 	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/keyboard.c -o keyboard.o -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/pci.c      -o pci.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/ide.c      -o ide.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
+	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/serial.c   -o serial.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/lib/string.c       -o string.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/mmap.c         -o mem.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/heap.c         -o heap.o     -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/paging.c       -o paging.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
+	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/io.c           -o ioc.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 
 	i386-unknown-freebsd14.3-ld *.o -T link.ld -o kernel.elf
 

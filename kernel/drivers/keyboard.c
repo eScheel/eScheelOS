@@ -24,12 +24,12 @@ static char scancode_to_ascii_shifted[] = {                                     
 static uint8_t shift_key_pressed = 0; 
 //static uint8_t caps_key_pressed  = 0;
 
-char input_buffer[1024];
-size_t buffer_index = 0;
+char keyboard_input_buffer[1024];
+size_t keyboard_buffer_index = 0;
 
 void keyboard_init()
 {
-    memset(input_buffer, 0, 1024);
+    memset(keyboard_input_buffer, 0, 1024);
     return;
 }
 
@@ -74,7 +74,7 @@ void keyboard_interrupt_handler()
         }
 
         // Ignore non-printable keys
-        if (c == 0)
+        if(c == 0)
         {
             return;
         }
@@ -82,28 +82,22 @@ void keyboard_interrupt_handler()
         // Handle Backspace
         if (c == '\b')
         {
-            // Only backspace if the buffer isn't empty
-            if (buffer_index > 0)
+            if (keyboard_buffer_index > 0)
             {
-                buffer_index--;
-                input_buffer[buffer_index] = 0; // Erase the last char
+                keyboard_input_buffer[keyboard_buffer_index] = c;   // Add '\b' to the buffer so callers can handle.
+                --keyboard_buffer_index;
             }
             return;
         }
 
-        // Handle a normal character
-        // Check for overflow *before* writing.
-        // We check < 1023 because index 1022 is the *last*
-        // character, and index 1023 *must* be the null terminator.
-        if (buffer_index < 1023)
+        // Add the normal character to the buffer.
+        if(keyboard_buffer_index < 1023)
         {
-            input_buffer[buffer_index] = c;
-            buffer_index++;
-            input_buffer[buffer_index] = 0; // Keep the string null-terminated
+            keyboard_input_buffer[keyboard_buffer_index] = c;
+            keyboard_buffer_index++;
+            return;
         }
         
-        // If buffer is full (buffer_index is 1023), 
-        // we just drop the key.
-        return;
+        // If buffer is full (keyboard_buffer_index is 1023), we just drop the key.
     }
 }

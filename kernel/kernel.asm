@@ -10,28 +10,17 @@ section .text
 global KERNEL_INIT
 extern GDT_REINIT
 extern vga_init
-extern vga_putc
-extern vga_printc
 extern vga_prints
-extern vga_printh
-extern vga_printd
 extern memory_map_init
-extern memory_map
-extern available_memory_map
-extern available_memory_size
-extern mmap_avail_entry_count
-extern main_memory_index
 extern REMAP_PICS
 extern IDT_INIT
 extern timer_init
-extern timer_wait
 extern keyboard_init
 extern paging_init
 extern heap_init
-extern print_heap_info
-extern malloc
 extern pci_probe_devices
 extern ide_init
+extern serial_init
 extern kernel_main
 global SYSTEM_HALT
 
@@ -57,7 +46,9 @@ KERNEL_INIT:
     call vga_init
     push dword str_os_name
     call vga_prints
-    add  esp, 4
+    push dword str_kern_init
+    call vga_prints
+    add  esp, 8
 
     ; Parse and take control of the memory map passed by BIOS.
     push dword str_mmap_init
@@ -128,6 +119,14 @@ KERNEL_INIT:
     call vga_prints
     add  esp, 12
 
+    ; Initialize serial driver.
+    push dword str_rs232_init
+    call vga_prints
+    call serial_init
+    push dword str_okay
+    call vga_prints
+    add  esp, 8
+
     ; ...
     call kernel_main
 
@@ -146,19 +145,20 @@ SYSTEM_HALT:
 section .rodata
 
 str_os_name:   db "eScheel OS",0xa,0
-str_mmap_init: db "Initializing bios memory map ... ",0
-str_intr_init: db "Initializing interrupts ... ",0
-str_page_init: db "Initializing system paging ... ",0
-str_heap_init: db "Initializing system heap ... ",0
-str_pci_probe: db "Initializing pci devices ... ",0
-str_ide_init:  db "Initializing ide driver ... ",0
+str_kern_init: db "Initializing the kernel:",0xa,0
+str_mmap_init: db "  bios memory map ... ",0
+str_intr_init: db "  interrupts ........ ",0
+str_page_init: db "  identity paging ... ",0
+str_heap_init: db "  system heap ....... ",0
+str_pci_probe: db "  pci devices ....... ",0
+str_ide_init:  db "  ide driver ........ ",0
+str_rs232_init:db "  serial driver ..... ",0
 str_okay:      db "[OK]",0xa,0
 str_halted:    db "System Halted ...",0
 
 ;=============================================================================================
 section .data
 
-extern system_uptime_seconds
 extern page_dir_phys_addr
 
 boot_drive: db 0

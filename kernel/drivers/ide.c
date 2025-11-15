@@ -90,7 +90,7 @@ void ide_init(uint8_t boot_drive)
     // ...
     if(!device_found) 
     {
-        vga_prints("No Legacy IDE controller found.\n");
+        vga_prints("No capable legacy IDE controller found.\n");
         SYSTEM_HALT();
     }
 
