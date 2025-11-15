@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 
-// --- I/O Port Offsets for Primary ATA Bus ---
+// I/O Port Offsets for Primary ATA Bus
 // These are offsets from the base port (0x1F0)
 #define ATA_REG_DATA       0x00
 #define ATA_REG_ERROR      0x01
@@ -22,23 +22,22 @@
 #define ATA_REG_ALT_STATUS 0x00
 #define ATA_REG_DEV_CTRL   0x00
 
-// --- Status Register Bits ---
+// Status Register Bits
 #define ATA_SR_BSY         0x80    // Busy
 #define ATA_SR_DRDY        0x40    // Drive Ready
 #define ATA_SR_DF          0x20    // Drive Fault
 #define ATA_SR_ERR         0x01    // Error
 #define ATA_SR_DRQ         0x08    // Data Request Ready
 
-// --- Commands ---
+// Commands
 #define ATA_CMD_READ_PIO   0x20
 #define ATA_CMD_WRITE_PIO  0x30
 #define ATA_CMD_IDENTIFY   0xEC
 
-// --- Drive Selection ---
+// Drive Selection
 #define ATA_SELECT_MASTER  0xA0
 #define ATA_SELECT_SLAVE   0xB0
 
-// --- New IDENTIFY structure ---
 // Represents the 512-byte data block returned by ATA_CMD_IDENTIFY
 struct ata_identify {
     uint16_t config;                // Word 0

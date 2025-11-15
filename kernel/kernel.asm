@@ -32,7 +32,7 @@ extern print_heap_info
 extern malloc
 extern pci_probe_devices
 extern ide_init
-global KERNEL_IDLE
+extern kernel_main
 global SYSTEM_HALT
 
 ;=============================================================================================
@@ -97,7 +97,9 @@ KERNEL_INIT:
     push dword str_okay
     call vga_prints
     add  esp, 4
-    sti ; Probably ok to enable interrupts now.
+
+    ; Probably ok to enable interrupts now.
+    sti
 
     ; Initialize the system heap.
     push dword str_heap_init
@@ -118,15 +120,16 @@ KERNEL_INIT:
     ; Initialize the IDE driver.
     push dword str_ide_init
     call vga_prints
+    xor  edx, edx
+    mov  dl, byte [boot_drive]
+    push edx
     call ide_init
     push dword str_okay
     call vga_prints
-    add  esp, 8
+    add  esp, 12
 
-KERNEL_IDLE:
-.LOOP:
-    hlt         ; Put the CPU to sleep until an interrupt occures.
-    jmp .LOOP
+    ; ...
+    call kernel_main
 
 ;=============================================================================================
 

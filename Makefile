@@ -17,6 +17,7 @@ kernel:
 	nasm kernel/arch/irq.asm -f elf32 -o irq.o
 	nasm kernel/sys/io.asm   -f elf32 -o io.o
 
+	i386-unknown-freebsd14.3-gcc14 -c kernel/kernel.c           -o kernelc.o  -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/arch/isr.c         -o isrc.o     -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/vga.c      -o vga.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/pit.c      -o pit.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra

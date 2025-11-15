@@ -40,7 +40,6 @@ struct HEAP_info {
 }__attribute__((packed));
 
 void print_heap_info();
-
 void* malloc(size_t sz);
 void  free(void* b);
 
