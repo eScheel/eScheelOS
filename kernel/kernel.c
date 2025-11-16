@@ -7,9 +7,6 @@
 /* ... */
 static void kernel_shell()
 {
-    //vga_set_color(0x07);
-    //vga_clear();
-
     kprintf("\n++++ Kernel Shell Invoked. ++++\n");
 
     char* s = (char*)malloc(1024);
@@ -22,7 +19,8 @@ static void kernel_shell()
 
         // If command is not empty, process it.
         if(*s)  {
-            if(strncmp(s, "help", strlen(s))==0) {
+            if(strncmp(s, "help", strlen(s))==0)
+            {
                 kprintf("\nPossible Commands:");
                 kprintf("\n  clear    (Clears the console screen)");
                 kprintf("\n  heapstat (Prints current heap information.)");
@@ -30,24 +28,29 @@ static void kernel_shell()
                 kprintf("\n  exit     (Exits the kernel shell.)");
             }
 
-            else if(strncmp(s, "clear", strlen(s))==0) {
+            else if(strncmp(s, "clear", strlen(s))==0)
+            {
                 vga_clear();
             }
 
-            else if(strncmp(s, "heapstat", strlen(s))==0) {
+            else if(strncmp(s, "heapstat", strlen(s))==0)
+            {
                 kprintf("\n\n");
                 print_heap_info();
             }
 
-            else if(strncmp(s, "uptime", strlen(s))==0) {
+            else if(strncmp(s, "uptime", strlen(s))==0)
+            {
                 kprintf("\nSystem Uptime: %d", system_uptime_seconds);
             }
 
-            else if(strncmp(s, "exit", strlen(s))==0) {
+            else if(strncmp(s, "exit", strlen(s))==0)
+            {
                 break;
             }
 
-            else {
+            else
+            {
                 kprintf("\nUnknown Command [%s]", s);
             }
         }
