@@ -5,6 +5,9 @@
 #include <stddef.h>
 
 extern volatile uint32_t system_uptime_seconds;
+extern volatile uint32_t system_uptime_minutes;
+extern volatile uint32_t system_uptime_hours;
+extern volatile uint32_t system_uptime_days;
 
 extern void timer_wait(uint32_t);
 

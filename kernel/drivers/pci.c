@@ -56,11 +56,11 @@ void pci_probe_devices()
                 // If register 0 is all ones, it means nothing is present.
                 if(reg0 != 0xFFFFFFFF || index > 255)
                 {
-                    // ...
+                    // Let's get some initial info for hdr_type before we decide to save or not.
                     uint32_t regC = pci_conf_read_dword(bus, slot, func, 0x0c);
                     pci_device_hdr[index].hdr_type = (regC >> 16) & 0xff;
 
-                    // ...
+                    // We are only conserned with hdr_type(0), endpoint hdr.
                     if(pci_device_hdr[index].hdr_type != 0)
                     {
                         continue;

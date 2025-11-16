@@ -256,14 +256,18 @@ void probe_devices()
 
 
 
-    /*char *d = (char*)malloc(1024);
-    memset(d, 0, 1024);
-    ide_read_sectors(2, 1, d);
-    for(int i=0; i<1024; i++)
+    char* data = (char*)malloc(512);
+    memset(data, 0, 512);
+
+    ide_read_sectors(0, 1, data);
+
+    for(int i=0; i<512; i++)
     {
-        vga_printc(d[i]);
+        kprintf("%x", data[i]);
+        timer_wait(10);
     }
-    free(d);*/
+
+    free(data);
 
     //ide_write_sectors(0, 1, "This is a test string ...");
 

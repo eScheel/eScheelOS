@@ -3,7 +3,11 @@
 
 static volatile uint32_t timer_ticks;
 static volatile size_t timer_counter;
+
 volatile uint32_t system_uptime_seconds;
+volatile uint32_t system_uptime_minutes;
+volatile uint32_t system_uptime_hours;
+volatile uint32_t system_uptime_days;
 
 /* ... */
 void timer_init()
@@ -11,6 +15,9 @@ void timer_init()
     timer_ticks = 0;
     timer_counter = 0;
     system_uptime_seconds = 0;
+    system_uptime_minutes = 0;
+    system_uptime_hours = 0;
+    system_uptime_days = 0;
 
     // 1,193,180 (ticks/sec) / 100 (interrupts/sec) = 11931 (ticks/interrupt)
     int divisor = 1193180 / 100;   /* Calculate our divisor */
@@ -30,25 +37,50 @@ void timer_init()
 /* ... */
 void timer_interrupt_handler()
 {
+    // Each tick is 10 milliseconds. (.01 seconds)
+    // 10 ticks is 100 milliseconds. (.10 seconds)
+    // 100 ticks is 1 second.
     timer_ticks++;
 
-    // Seems to be 100 a second.
-    if(timer_ticks % 1 == 0)
+    // Has a second passed?
+    if(timer_ticks % 100 == 0)
     {
-        if(timer_ticks % 100 == 0)
-        {
-            system_uptime_seconds++;
-        }
+        system_uptime_seconds++;
 
-        if(timer_counter > 0) {
-           timer_counter--;
+        // Has a minute passed?
+        if(system_uptime_seconds >= 60)
+        {
+            system_uptime_minutes++;
+
+            // Has an hour passed?
+            if(system_uptime_minutes >= 60)
+            {
+                system_uptime_hours++;
+
+                // Has a day passed?
+                if(system_uptime_hours >= 24)
+                {
+                    system_uptime_days++;
+
+                    // TODO: Years.
+
+                    system_uptime_hours = 0;
+                }
+                system_uptime_minutes = 0;
+            }
+            system_uptime_seconds = 0;
         }
+    }
+
+    // Handle timer_wait counter.
+    if(timer_counter > 0) {
+        timer_counter--;
     }
 }
 
 /* 
  * Wait for specified amount of time. 
- * A value of 100 seems to be a second. 
+ * A value of 100 is a second. 
  */
 void timer_wait(uint32_t tc)
 {

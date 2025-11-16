@@ -14,7 +14,7 @@ static void kernel_shell()
     {
         memset(s, 0, 1024);
     
-        kprintf("\n|> ");
+        kprintf("\nksh> ");
         kgets(s);
 
         // If command is not empty, process it.
@@ -24,7 +24,7 @@ static void kernel_shell()
                 kprintf("\nPossible Commands:");
                 kprintf("\n  clear    (Clears the console screen)");
                 kprintf("\n  heapstat (Prints current heap information.)");
-                kprintf("\n  uptime   (Prints system uptime in seconds.)");
+                kprintf("\n  uptime   (Prints system uptime as dd:hh:mm:ss)");
                 kprintf("\n  exit     (Exits the kernel shell.)");
             }
 
@@ -41,7 +41,8 @@ static void kernel_shell()
 
             else if(strncmp(s, "uptime", strlen(s))==0)
             {
-                kprintf("\nSystem Uptime: %d", system_uptime_seconds);
+                kprintf("\nSystem Uptime: %d:%d:%d:%d", system_uptime_days, system_uptime_hours, \
+                                                        system_uptime_minutes, system_uptime_seconds);
             }
 
             else if(strncmp(s, "exit", strlen(s))==0)
