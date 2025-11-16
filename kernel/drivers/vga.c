@@ -170,11 +170,20 @@ void vga_printc(char c)
 	// Handle BS.
 	else if(c == '\b')
 	{
+		// Handle left most side of screen.
 		if(vga.cursor_x <= 0)
-		{ 
-			return;
+		{
+			if(vga.cursor_y <= 0)
+			{
+				return;
+			}
+			vga.cursor_y -= 1;
+			vga.cursor_x = VGA_WIDTH - 1;
 		}
-		vga.cursor_x -= 1;
+		else 
+		{
+			vga.cursor_x -= 1;
+		}
 		terminal_buffer[index-1] = ((uint16_t)' ' | (uint16_t)(vga.color << 8));
 		goto end_vga_printc;
 	}

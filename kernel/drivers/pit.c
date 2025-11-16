@@ -32,10 +32,13 @@ void timer_interrupt_handler()
 {
     timer_ticks++;
 
-    // A second has passed .
-    if(timer_ticks % 100 == 0)
+    // Seems to be 100 a second.
+    if(timer_ticks % 1 == 0)
     {
-        system_uptime_seconds++;
+        if(timer_ticks % 100 == 0)
+        {
+            system_uptime_seconds++;
+        }
 
         if(timer_counter > 0) {
            timer_counter--;
@@ -43,14 +46,17 @@ void timer_interrupt_handler()
     }
 }
 
-/* Wait for specified amount of seconds. */
-void timer_wait(uint32_t sec)
+/* 
+ * Wait for specified amount of time. 
+ * A value of 100 seems to be a second. 
+ */
+void timer_wait(uint32_t tc)
 {
     asm volatile("cli");
-    timer_counter = sec;
+    timer_counter = tc;
     asm volatile("sti");
-    while(timer_counter) { 
+    while(timer_counter) 
+    { 
         asm volatile("hlt");
-        continue;
     }
 }

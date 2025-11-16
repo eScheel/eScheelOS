@@ -65,8 +65,5 @@ static void kernel_shell()
 void kernel_main(void)
 {
     kernel_shell();
-
-    while(1) {
-        asm volatile("hlt");
-    }
+    while(1) { asm volatile("hlt"); }
 }
