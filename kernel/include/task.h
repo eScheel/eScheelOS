@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+#define MAX_TASKS   16
+#define STACK_SIZE  8192    // 4KB stack for new tasks
+
 // Define our new task states
 #define TASK_STATE_FREE     0   // Slot is free
 #define TASK_STATE_RUNNING  1   // Task is active and running
@@ -20,6 +23,6 @@ struct task {
 
 int create_task(void(*task_function)(void));
 uint32_t schedule(uint32_t current_esp);
-void task_exit(void);
+void task_exit();
 
 #endif // __TASK_H

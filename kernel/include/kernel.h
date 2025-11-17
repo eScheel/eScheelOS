@@ -66,6 +66,9 @@ extern void  free(void*);
 // KERNEL.ASM =========================================================
 extern void SYSTEM_HALT();
 
+// KERNEL.C ===========================================================
+extern void kernel_main();
+
 // IO.ASM =============================================================
 extern uint8_t  INB(uint16_t);
 extern void     OUTB(uint16_t, uint8_t);

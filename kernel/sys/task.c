@@ -3,26 +3,22 @@
 #include <string.h> // for memset
 #include <pit.h>    // for timer_wait
 
-#define MAX_TASKS   16
-#define STACK_SIZE  4096    // 4KB stack for new tasks
-
 // The table of all tasks in the system
-struct task task_table[MAX_TASKS];
+static struct task task_table[MAX_TASKS];
 
 // The index of the currently running task in the task_table
-volatile uint32_t current_task_index = 0;
+static volatile uint32_t current_task_index = 0;
 
 // Flag to prevent scheduling before tasking is initialized
-volatile int tasking_enabled = 0;
+static volatile int tasking_enabled = 0;
 
-/**
- * @brief   Creates a new task and adds it to the task table.
- */
+/* Creates a new task and adds it to the task table. */
 int create_task(void (*task_function)(void))
 {
-    // Find a free task slot
     int task_index = -1;
-    for (int i = 0; i < MAX_TASKS; i++)
+
+    // Find a free task slot
+    for(int i=0; i<MAX_TASKS; i++)
     {
         if (task_table[i].state == TASK_STATE_FREE)
         {
@@ -30,18 +26,20 @@ int create_task(void (*task_function)(void))
             break;
         }
     }
-    if (task_index == -1) {
-        kprintf("\nFailed to create task: Task table full!");
-        return -1; // No free slots
+
+    // No free slots
+    if(task_index == -1) 
+    {
+        return(task_index);
     }
 
     // Allocate a stack
     uint8_t* stack = (uint8_t*)malloc(STACK_SIZE);
-    if (!stack) {
-        kprintf("\nFailed to create task: Out of memory!");
-        return -1; // Malloc failed
+    if(!stack) 
+    {
+        return(-1); // Malloc failed
     }
-    uint32_t stack_top = (uint32_t)stack + STACK_SIZE;
+    uint32_t stack_top = (uint32_t)(stack + STACK_SIZE);
 
     // "Pre-load" the stack
     uint32_t* stack_ptr = (uint32_t*)stack_top;
@@ -62,13 +60,11 @@ int create_task(void (*task_function)(void))
     task_table[task_index].stack_base = (uint32_t)stack;
     task_table[task_index].state = TASK_STATE_RUNNING; // Set as running
 
-    return 0; // Success
+    return(0); // Success
 }
 
-/*
- * Initializes the multi-tasking system.
- */
-void tasking_init(void)
+/* Initializes the multi-tasking system. */
+void tasking_init()
 {
     // Clear the task table
     memset(task_table, 0, sizeof(task_table));
@@ -83,20 +79,9 @@ void tasking_init(void)
     tasking_enabled = 1;
 }
 
-/*
- * The main scheduler function, called by the timer IRQ.
- * This function also acts as the "reaper" for zombie tasks.
- */
-uint32_t schedule(uint32_t current_esp)
+/* ... */
+static void reaper()
 {
-    if (!tasking_enabled) 
-    {
-        return current_esp;
-    }
-
-    // First, loop through and reap any zombie tasks.
-    // This is safe because we are running from an interrupt,
-    // and this function is not re-entrant.
     for(int i = 0; i < MAX_TASKS; i++)
     {
         if(task_table[i].state == TASK_STATE_ZOMBIE)
@@ -111,14 +96,27 @@ uint32_t schedule(uint32_t current_esp)
             //kprintf("\n[Task %d reaped]\n", i);
         }
     }
+} 
+
+/* The main scheduler function, called by the timer IRQ. */
+uint32_t schedule(uint32_t current_esp)
+{
+    if(!tasking_enabled) 
+    {
+        return current_esp;
+    }
 
     // Save the current task's stack (if it's not a zombie)
-    if (task_table[current_task_index].state == TASK_STATE_RUNNING)
+    reaper();
+    if(task_table[current_task_index].state == TASK_STATE_RUNNING)
     {
         task_table[current_task_index].esp = current_esp;
     }
 
-    // Find the next RUNNING task
+    // Find the next task in the list that is ready to run.
+    // It assumes the task that just got interrupted (current_task_index) is done for now, 
+    //  and it needs to find the next available one.
+    // It must be able to "skip" any tasks that are TASK_STATE_FREE or TASK_STATE_ZOMBIE.
     uint32_t next_task_index = current_task_index;
     do {
         next_task_index = (next_task_index + 1) % MAX_TASKS;
@@ -128,15 +126,24 @@ uint32_t schedule(uint32_t current_esp)
     current_task_index = next_task_index;
 
     // Return the new task's stack pointer
-    return task_table[current_task_index].esp;
+    return(task_table[current_task_index].esp);
 }
 
 /*
  * Marks the current task as a ZOMBIE.
  * It then spins, waiting for the scheduler (running as another task) to reap it.
  */
-void task_exit(void)
+void task_exit()
 {
+    // Tried to kill main. Something must be wrong.
+    if(current_task_index==0) 
+    {
+        kprintf("Main Process somehow died.\n");
+        SYSTEM_HALT();
+    }
+
+    kprintf("\nKilling task[%d]\n", current_task_index);
+
     // Mark ourselves as a zombie, ready for reaping.
     asm volatile("cli");
     task_table[current_task_index].state = TASK_STATE_ZOMBIE;

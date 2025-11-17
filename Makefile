@@ -31,7 +31,8 @@ kernel:
 	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/heap.c         -o heap.o     -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/paging.c       -o paging.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/io.c           -o ioc.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
-	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/task.c         -o task.o    -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
+	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/task.c         -o task.o     -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
+	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/kshell.c       -o kshell.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 
 	i386-unknown-freebsd14.3-ld *.o -T link.ld -o kernel.elf
 

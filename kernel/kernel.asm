@@ -136,7 +136,7 @@ KERNEL_INIT:
     call vga_prints
     add esp, 8
 
-    ; TASK(0)
+    ; This will be TASK[0]. Our main task.
     call kernel_main
 
 ;=============================================================================================
