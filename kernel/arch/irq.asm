@@ -58,8 +58,15 @@ REMAP_PICS:
 ; After remapping, it's at IDT entry 32 (0x20)
 IRQ0_HANDLER:
     pusha
-    call timer_interrupt_handler
-    mov  al, 0x20
+    mov  eax, esp                   ; Get the current stack pointer
+    push eax                        ; Push it as an argument for current_esp.
+    call timer_interrupt_handler    ; Call the C handler. It returns the NEW esp in EAX.
+    add  esp, 4                     ; Clean up the argument we pushed
+    ; We are overwriting the esp register. 
+    ; esp no longer points to the stack of the task that was interrupted. 
+    ; It now points to the top of the stack for the new task that the scheduler chose.
+    mov  esp, eax       ; Load the new task's stack pointer into ESP.
+    mov  al, 0x20       ; ACK the interrupt.
     out  0x20, al
     popa
     iret

@@ -2,7 +2,9 @@
 #include <vga.h>
 #include <pit.h>
 #include <ide.h>
+#include <task.h>
 #include <string.h>
+#include <convert.h>
 
 /* ... */
 static void kernel_shell()
@@ -10,7 +12,7 @@ static void kernel_shell()
     kprintf("\n++++ Kernel Shell Invoked. ++++\n");
 
     char* s = (char*)malloc(1024);
-    for(;1;)
+    while(1)
     {
         memset(s, 0, 1024);
     
@@ -60,11 +62,28 @@ static void kernel_shell()
     kprintf("\nExiting ... ");
     free(s);
     kprintf("[OK]\n");
+    task_exit();
 }
 
 /* ... */
 void kernel_main(void)
 {
-    kernel_shell();
-    while(1) { asm volatile("hlt"); }
+    kprintf("Initialization complete! Main task started.");
+    kprintf("\nCreating kernel shell task ... ");
+    if(create_task(kernel_shell) != 0)
+    {
+        kprintf("[FAILED]\n");
+        SYSTEM_HALT();
+    }
+    kprintf("[OK]");
+
+
+    while(1) { 
+        for(int x=0; x<VGA_WIDTH; x++)
+        {
+            vga_putc('*', x, 24);
+            timer_wait(10);
+        }
+        asm volatile("hlt"); 
+    }
 }

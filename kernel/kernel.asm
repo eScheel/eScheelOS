@@ -21,6 +21,7 @@ extern heap_init
 extern pci_probe_devices
 extern ide_init
 extern serial_init
+extern tasking_init
 extern kernel_main
 global SYSTEM_HALT
 
@@ -127,7 +128,15 @@ KERNEL_INIT:
     call vga_prints
     add  esp, 8
 
-    ; ...
+    ; Initialize multi-tasking.
+    push dword str_task_init
+    call vga_prints
+    call tasking_init
+    push dword str_okay
+    call vga_prints
+    add esp, 8
+
+    ; TASK(0)
     call kernel_main
 
 ;=============================================================================================
@@ -146,13 +155,14 @@ section .rodata
 
 str_os_name:   db "eScheel OS",0xa,0
 str_kern_init: db "Initializing the kernel:",0xa,0
-str_mmap_init: db "  bios memory map ... ",0
-str_intr_init: db "  interrupts ........ ",0
-str_page_init: db "  identity paging ... ",0
-str_heap_init: db "  system heap ....... ",0
-str_pci_probe: db "  pci devices ....... ",0
-str_ide_init:  db "  ide driver ........ ",0
-str_rs232_init:db "  serial driver ..... ",0
+str_mmap_init: db "  bios memory map .... ",0
+str_intr_init: db "  interrupts ......... ",0
+str_page_init: db "  identity paging .... ",0
+str_heap_init: db "  system heap ........ ",0
+str_pci_probe: db "  pci devices ........ ",0
+str_ide_init:  db "  ide driver ......... ",0
+str_rs232_init:db "  serial driver ...... ",0
+str_task_init: db "  multi-tasking ...... ",0
 str_okay:      db "[OK]",0xa,0
 str_halted:    db "System Halted ...",0
 

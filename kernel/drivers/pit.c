@@ -1,6 +1,8 @@
 #include <kernel.h>
 #include <pit.h>
 
+extern uint32_t schedule(uint32_t);
+
 static volatile uint32_t timer_ticks;
 static volatile size_t timer_counter;
 
@@ -35,7 +37,7 @@ void timer_init()
 }
 
 /* ... */
-void timer_interrupt_handler()
+uint32_t timer_interrupt_handler(uint32_t current_esp)
 {
     // Each tick is 10 milliseconds. (.01 seconds)
     // 10 ticks is 100 milliseconds. (.10 seconds)
@@ -76,6 +78,9 @@ void timer_interrupt_handler()
     if(timer_counter > 0) {
         timer_counter--;
     }
+
+    // Call the scheduler and return the (potentially new) stack pointer
+    return(schedule(current_esp));
 }
 
 /* 
