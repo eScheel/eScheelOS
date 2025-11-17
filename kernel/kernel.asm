@@ -11,6 +11,7 @@ global KERNEL_INIT
 extern GDT_REINIT
 extern vga_init
 extern vga_prints
+extern draw_logo
 extern memory_map_init
 extern REMAP_PICS
 extern IDT_INIT
@@ -45,6 +46,7 @@ KERNEL_INIT:
 
     ; Initialize graphics array and print for success.
     call vga_init
+    call draw_logo
     push dword str_os_name
     call vga_prints
     push dword str_kern_init
