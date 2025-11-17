@@ -39,14 +39,17 @@ void vga_init()
 		}
 	}
 
-	// Reset cursor position.
+	// Reset position.
     vga.cursor_y = 0;
     vga.cursor_x = 0;
+
+	// We can disable the cursor for now.
+	vga_disable_cursor();
     return;
 }
 
 /* ... */
-static void vga_update_cursor()
+void vga_update_cursor()
 {
 	/* 
 	 * The equation for finding the index in a linear chunk of memory.
@@ -64,6 +67,22 @@ static void vga_update_cursor()
 	OUTB(0x3D4, 15);
 	OUTB(0x3D5, index);
 	return;
+}
+
+/* ... */
+void vga_enable_cursor()
+{
+	OUTB(0x3D4, 0x0A);
+	OUTB(0x3D5, (INB(0x3D5) & 0xC0) | 14);
+	OUTB(0x3D4, 0x0B);
+	OUTB(0x3D5, (INB(0x3D5) & 0xE0) | 15);
+}
+
+/* ... */
+void vga_disable_cursor()
+{
+	OUTB(0x3D4, 0x0A);
+	OUTB(0x3D5, 0x20);
 }
 
 /* ... */
@@ -200,7 +219,6 @@ void vga_printc(char c)
 
 end_vga_printc:
 	vga_scroll();
-	vga_update_cursor();
     return;
 }
 

@@ -27,6 +27,7 @@ kernel:
 	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/serial.c   -o serial.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/lib/string.c       -o string.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/lib/convert.c      -o convert.o  -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
+	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/logo.c         -o logo.o     -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/mmap.c         -o mem.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/heap.c         -o heap.o     -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/paging.c       -o paging.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra

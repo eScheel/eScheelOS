@@ -25,12 +25,18 @@ static uint8_t shift_key_pressed = 0;
 //static uint8_t caps_key_pressed  = 0;
 
 char keyboard_input_buffer[1024];
-size_t keyboard_buffer_index = 0;
+static size_t keyboard_buffer_index = 0;
 
 void keyboard_init()
 {
     memset(keyboard_input_buffer, 0, 1024);
     return;
+}
+
+void keyboard_reset_buffer()
+{
+    memset(keyboard_input_buffer, 0, 1024);
+    keyboard_buffer_index = 0;
 }
 
 void keyboard_interrupt_handler()
@@ -53,6 +59,8 @@ void keyboard_interrupt_handler()
             }
             return;
         }
+
+        //vga_printh(scancode);
 
         // Handle Key Press.
         if(scancode == left_shift_pressed 

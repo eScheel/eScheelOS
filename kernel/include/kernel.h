@@ -31,6 +31,8 @@ typedef struct {
     struct SMAP_entry entries[SMAP_entry_max];
 }__attribute__((packed)) mmap_descriptor_t;
 
+extern void mmap_display_available();
+
 // HEAP.C ==============================================================
 struct HEAP_info {
     uint32_t base;

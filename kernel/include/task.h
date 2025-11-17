@@ -16,13 +16,14 @@
 // All other registers (eax, ebx, eip, eflags, etc.) are
 // saved onto this stack by the interrupt handler.
 struct task {
+    char name[24];          // ...
     uint32_t esp;           // Stack pointer for this task
     uint32_t stack_base;    // The original pointer from malloc, for freeing later
-    int state;             // 0 = inactive/free, 1 = active/running
-};
+    int32_t  state;         // 0 = inactive/free, 1 = active/running
+}__attribute__((packed));
 
-int create_task(void(*task_function)(void));
+int task_exec(void(*task_function)(void));
 uint32_t schedule(uint32_t current_esp);
-void task_exit();
+void task_kill();
 
 #endif // __TASK_H

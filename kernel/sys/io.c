@@ -9,10 +9,11 @@ void kprintf(const char *fmt, ...)
     va_list args;
     va_start(args, fmt);
 
-    for (size_t i=0; fmt[i]!='\0'; i++)
+    // ...
+    for(size_t i=0; fmt[i]!='\0'; i++)
     {
         // If it's not a format specifier, just print the character.
-        if (fmt[i] != '%')
+        if(fmt[i] != '%')
         {
             vga_printc(fmt[i]);
             continue;
@@ -20,7 +21,7 @@ void kprintf(const char *fmt, ...)
 
         // We've found a '%', look at the next character for the type.
         i++;
-        switch (fmt[i])
+        switch(fmt[i])
         {
             case 'c': // Character
             {
@@ -32,7 +33,7 @@ void kprintf(const char *fmt, ...)
             case 's': // String
             {
                 const char* s = va_arg(args, const char*);
-                if (!*s) {
+                if(!*s) {
                     s = "(null)"; // Handle null pointers gracefully
                 }
                 vga_prints(s);
@@ -74,8 +75,7 @@ void kprintf(const char *fmt, ...)
 void kgets(char *s)
 {
     // Reset the actual keyboard buffer, where we get our new string from.
-    memset(keyboard_input_buffer, 0, 1024);
-    keyboard_buffer_index = 0;
+    keyboard_reset_buffer();
 
     // ...
     int i = 0;
@@ -100,7 +100,9 @@ void kgets(char *s)
                 keyboard_input_buffer[i] = 0; // Erase the last char
                 s[i] = 0;   // Also erase the last char from our input sring.
 
+                // ECHO the character and update cursor position.
                 vga_printc('\b');
+                vga_update_cursor();
             }
             continue;
         }
@@ -112,9 +114,12 @@ void kgets(char *s)
         // I believe we need to match that.
         if(i < 1023) 
         {
-            // ECHO the character.
+            // ECHO the character and update cursor position.
             vga_printc(s[i]);
-            i++;    // Get rdy for next char.
+            vga_update_cursor();
+
+            // Get rdy for next char.
+            i++;
         }
     }
 

@@ -9,14 +9,17 @@
 /* ... */
 void kshell()
 {
-    kprintf("\n++++ Kernel Shell Invoked. ++++\n");
+    kprintf("\n\n++++ Kernel Shell v1.0 ++++\n");
 
     char* s = (char*)malloc(1024);
+    vga_enable_cursor();
+
     while(1)
     {
         memset(s, 0, 1024);
     
         kprintf("\nksh> ");
+        vga_update_cursor();
         kgets(s);
 
         // If command is not empty, process it.
@@ -26,6 +29,7 @@ void kshell()
                 kprintf("\nPossible Commands:");
                 kprintf("\n  clear    (Clears the console screen)");
                 kprintf("\n  heapstat (Prints current heap information.)");
+                kprintf("\n  memmap   (Displays the regions of available memory.)");
                 kprintf("\n  uptime   (Prints system uptime as dd:hh:mm:ss)");
                 kprintf("\n  exit     (Exits the kernel shell.)");
             }
@@ -39,6 +43,12 @@ void kshell()
             {
                 kprintf("\n\n");
                 print_heap_info();
+            }
+
+            else if(strncmp(s, "memmap", strlen(s))==0)
+            {
+                kprintf("\n\n");
+                mmap_display_available();
             }
 
             else if(strncmp(s, "uptime", strlen(s))==0)
@@ -59,6 +69,7 @@ void kshell()
         }
     }
 
+    vga_disable_cursor();
     free(s);
-    task_exit();
+    task_kill();
 }

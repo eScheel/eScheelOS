@@ -12,9 +12,29 @@ static volatile uint32_t current_task_index = 0;
 // Flag to prevent scheduling before tasking is initialized
 static volatile int tasking_enabled = 0;
 
-/* Creates a new task and adds it to the task table. */
-int create_task(void (*task_function)(void))
+/* Initializes the multi-tasking system. */
+void tasking_init()
 {
+    // Clear the task table
+    memset(task_table, 0, sizeof(struct task)*MAX_TASKS);
+
+    // Initialize Task 0 (the kernel_main task)
+    current_task_index = 0;
+    task_table[current_task_index].state = TASK_STATE_RUNNING;
+    task_table[current_task_index].esp   = 0;
+    task_table[current_task_index].stack_base = 0;
+
+    // Enable the scheduler
+    tasking_enabled = 1;
+}
+
+/* Creates a new task and adds it to the task table. */
+int task_exec(void (*task_function)(void))
+{
+    // What if a timer interrupt (IRQ 0) fires exactly in the middle of this function?
+    asm volatile("cli");
+
+    // Returns a -1 on failure.
     int task_index = -1;
 
     // Find a free task slot
@@ -30,6 +50,7 @@ int create_task(void (*task_function)(void))
     // No free slots
     if(task_index == -1) 
     {
+        asm volatile("sti");
         return(task_index);
     }
 
@@ -37,6 +58,7 @@ int create_task(void (*task_function)(void))
     uint8_t* stack = (uint8_t*)malloc(STACK_SIZE);
     if(!stack) 
     {
+        asm volatile("sti");
         return(-1); // Malloc failed
     }
     uint32_t stack_top = (uint32_t)(stack + STACK_SIZE);
@@ -60,23 +82,8 @@ int create_task(void (*task_function)(void))
     task_table[task_index].stack_base = (uint32_t)stack;
     task_table[task_index].state = TASK_STATE_RUNNING; // Set as running
 
+    asm volatile("sti");
     return(0); // Success
-}
-
-/* Initializes the multi-tasking system. */
-void tasking_init()
-{
-    // Clear the task table
-    memset(task_table, 0, sizeof(task_table));
-
-    // Initialize Task 0 (the kernel_main task)
-    task_table[0].state = TASK_STATE_RUNNING;
-    task_table[0].esp = 0;
-    task_table[0].stack_base = 0;
-    current_task_index = 0;
-
-    // Enable the scheduler
-    tasking_enabled = 1;
 }
 
 /* ... */
@@ -133,12 +140,12 @@ uint32_t schedule(uint32_t current_esp)
  * Marks the current task as a ZOMBIE.
  * It then spins, waiting for the scheduler (running as another task) to reap it.
  */
-void task_exit()
+void task_kill()
 {
     // Tried to kill main. Something must be wrong.
     if(current_task_index==0) 
     {
-        kprintf("Main Process somehow died.\n");
+        kprintf("\nMain Process somehow died.\n");
         SYSTEM_HALT();
     }
 

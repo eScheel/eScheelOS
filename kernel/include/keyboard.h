@@ -22,6 +22,7 @@
 #define caps_lock_released      0xba
 
 extern char keyboard_input_buffer[];
-extern size_t keyboard_buffer_index;
+
+extern void keyboard_reset_buffer();
 
 #endif // __KEYBOARD_H

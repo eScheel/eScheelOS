@@ -16,6 +16,9 @@ extern size_t vga_get_y();
 extern void vga_set_color(uint8_t);
 
 extern void vga_clear();
+extern void vga_update_cursor();
+extern void vga_enable_cursor();
+extern void vga_disable_cursor();
 
 extern void vga_putc(char, size_t, size_t);
 extern void vga_puts(const char*, size_t, size_t);

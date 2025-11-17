@@ -131,6 +131,7 @@ KERNEL_INIT:
     add  esp, 8
 
     ; Initialize multi-tasking.
+    cli ; kernel_main will enable interrupts again.
     push dword str_task_init
     call vga_prints
     call tasking_init
