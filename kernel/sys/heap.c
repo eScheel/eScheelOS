@@ -11,7 +11,9 @@ static uint32_t current_block_address; // This is our "high-water mark"
 void heap_init()
 {
     // For now we just allocate starting 1MB after the kernel offset.
-    // TODO: Eventually account for base_high as well.
+    // This should always point to main memory(largest mmap region)/
+    // The system will halt in mmap.c if kernel_base != main_memory_base.
+    // Eventually we will remap there and get more sophisticated with this.
     uint32_t base_addr = KERNEL_PHYSICAL_BASE + 0x100000;
 
     // Ensure the heap base itself is aligned to our 8-byte boundary
