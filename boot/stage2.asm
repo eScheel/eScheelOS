@@ -1,15 +1,14 @@
-;   eScheelOS
+;   eScheelOS Bootloader
 ;
 ;   stage2.asm
 ;
 ;   Author: Jacob Scheel
 ;
 ;   This code will do the following:
-;       1) Store the boot drive number passed by boot.bin
-;       2) Check and enable A20 using two of three methods. ; TODO: Eventually verify that A20 is actually enabled.
-;       3) Initialize video mode and memory map from BIOS.
-;       4) Load kernel code at address 4000h parse and bootstrap to 32bits.
-;       5) Parse and relocate elf executable to 100000h and then jump to kernel.elf
+;       1) Setup segments and a stack, store the boot drive number passed by boot.bin
+;       2) Check and enable A20 using two of three methods. Initialize video mode and memory map with BIOS.
+;       3) Load kernel code from lba 9 at address 4000h and bootstrap to 32bits.
+;       4) Parse and relocate elf executable to 100000h and pass some info before jumping to kernel.elf
 ;
 ;   TODO: Write a file system driver to load a kernel from a data region as opposed to flat sectors.
 ;
@@ -444,7 +443,7 @@ ELF_SKIP_PH:
     cmp cx, [program_header_count]
     jl  PHDR_LOOP  
 
-    ; Looks like we are done.
+    ; Looks like we are done with everything.
     ret
 
 ;=============================================================================================

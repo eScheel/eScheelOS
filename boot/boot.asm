@@ -1,12 +1,14 @@
-;   eScheelOS
+;   eScheelOS Bootloader
 ;
 ;   boot.asm
 ;
 ;   Author: Jacob Scheel
 ;
 ;   This code will do the following:
-;       1) Clear the direction flag, force set CS to zero, and store boot drive number passed by BIOS.
-;       2) Reset the drive and, Load and execute the stage2.bin code at address 1000h.
+;       1) Clear the direction flag, force set CS to zero, setup segments and a stack.
+;       2) Store boot drive number passed by BIOS. Reset the drive and Load and execute the stage2.bin.
+;
+;   This file also contains partition header and Filesystem information.
 ;
 [org 0x7c00]
 [bits 16]
@@ -116,7 +118,7 @@ db 0x80                 ; 0x1BE: Bootable Flag (0x80 = Active)
 db 0x00                 ; 0x1BF: Starting Head (CHS)
 db 0x01                 ; 0x1C0: Starting Sector (CHS)
 db 0x00                 ; 0x1C1: Starting Cylinder (CHS)
-db 0x0C                 ; 0x1C2: Partition Type (0x0C = "FAT32 LBA", but any non-zero is fine)
+db 0x01                 ; 0x1C2: Partition Type (0x0C = "FAT32 LBA", but any non-zero is fine)
 db 0x00                 ; 0x1C3: Ending Head (CHS)
 db 0x00                 ; 0x1C4: Ending Sector (CHS)
 db 0x00                 ; 0x1C5: Ending Cylinder (CHS)
