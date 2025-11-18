@@ -1,74 +1,3 @@
-
- 
-
-
-
-
-
-
-DISPLAY_MMAP:
-    push eax
-    push edx
-    push ecx
-    push esi
-
-    xor  esi, esi
-
-    xor  eax, eax
-    mov  si, word [mmap_desc_addr]  ; Set ax to the address of the stage2 mmap_desc.
-    mov  ax, [si]                   ; Move the entry count into ax register.
-    call TTY_PRINTD
-    call TTY_PRINTNL
-
-    add  si, 4
-    xor  edx, edx
-    xor  ecx, ecx
-    xor  edi, edi
-.LOOP:
-    add  si, 4              ; We want to display base high first.
-    mov  edx, dword [si]    ; BASE HIGH
-    call TTY_PRINTH
-    sub  si, 4
-    mov  edx, dword [si]    ; BASE LOW
-    call TTY_PRINTH
-
-    add  si, 8
-    mov  al, '|'
-    call TTY_PRINTC
-
-    add  si, 4
-    mov  edx, dword [si]    ; LENGTH HIGH
-    call TTY_PRINTH
-    sub  si, 4
-    mov  edx, dword [si]    ; LENGTH LOW
-    call TTY_PRINTH
-
-    add  si, 8
-    mov  al, '|'
-    call TTY_PRINTC
-
-    mov  edx, dword [si]    ; TYPE
-    call TTY_PRINTH
-    add  si, 4
-
-    add  si, 4              ; ACPI
-
-    call TTY_PRINTNL
-
-
-    inc  cx
-    mov  di, word [mmap_desc_addr]
-    mov  bx, [di]
-    cmp  cx, bx
-    jl  .LOOP
-
-    pop  esi
-    pop  ecx
-    pop  edx
-    pop  eax
-    ret
-
-
 ;
 ;
 ;
@@ -82,6 +11,11 @@ DISPLAY_MMAP:
     int 0x10                    ; Call BIOS video interrupt.
     jc  VIDEO_MODE_FAILED       ; For now we will halt, eventually we will add fallback logic or something ...
 .SKIPSETVID:
+
+
+
+
+
 
 
 
@@ -192,26 +126,66 @@ BIOS_DISK_RESET:
 
 
 
-
-
-
-RELOCATE_KERNEL:
-    xor si, si              ; Set up source segment:offset.
-    mov gs, si
-    mov si, kernel_addr_tmp ; A000h
-    mov di, 0xf800          ; Set up destination segment:offset.
-    mov fs, di
-    mov di, 0x8000          ; We are putting our kernel at 0x100000
-    xor cx, cx
-.LOOP:
-    mov al, byte [gs:si]
-    mov byte [fs:di], al    ; Move whats at 0xA000 into 0x100000
-    inc di
-    inc si                  ; Change this to use the rep instruction.
-    inc cx
-    cmp cx, kernel_size
-    jl .LOOP
+;
+; Caller must put value in EDX register.
+;
+TTY_PRINTH:
+    pushad                  ; Use the 32-bit PUSHAD instruction.
+    mov  esi, bph_hexout
+    mov  ecx, 8             ; Use ECX for the 32-bit LOOP instruction.
+.CONVERT_NIBBLE:
+    mov  eax, edx
+    shr  eax, 28            ; FIX: Shift by 28 for a 32-bit value.
+    ; Convert nibble in AL to ASCII character.
+    add  al, '0'
+    cmp  al, '9'
+    jle  .STORE_CHAR
+    add  al, 7
+.STORE_CHAR:
+    mov  [esi], al
+    inc  esi
+    shl  edx, 4             ; FIX: Shift by 4 to get the next nibble.
+    loop .CONVERT_NIBBLE
+    ; Print the resulting string.
+    mov  esi, bph_hexout
+    call TTY_PRINTS
+    popad                   ; Use the 32-bit POPAD instruction.
     ret
+bph_hexout: db '00000000',0
+
+;
+;   Prints a decimal number to the screen.
+;   Call must put data in eax register.
+;
+TTY_PRINTD:
+    pushad			    ; Save the stack.
+    mov ebx, 10		    ; Digits are extracted dividing by ten.
+    xor cx, cx		    ; Start the counter off with zero.
+.CONV_LOOP:
+    mov  edx, 0		    ; Necessary to divide by BX.
+    div  ebx		    ; DX:AX / 10 = AX(quotient):DX(remainder)
+    push edx		    ; Save DX for later use.
+    inc  cx		        ; Increment the counter.
+    cmp  eax, 0		    ; If number is not zero,
+    jne .CONV_LOOP      ; then do it all again.
+.DISP_LOOP:
+    pop  edx		    ; Restore DX to get our number in reverse now.
+    add  dl, 48		    ; Convert digit to character.
+    mov  al, dl		    ; Now move our character in AL to be printed.
+    call TTY_PRINTC 	; Print it out.
+    dec  cx		        ; Decrement our counter.
+    cmp  cx, 0		    ; If counter is zero then,
+    je  .DONE	        ;  we are done.
+    jmp .DISP_LOOP      ; Else, do it again.
+.DONE:
+    popad		 ; Restore the stack.
+    ret			 ; Return.
+
+
+
+
+
+
 
 
 ;
@@ -263,109 +237,6 @@ LOAD_KERNEL:
     int  0x13                ; Call BIOS disk interrupt.
     jc   KERNEL_LOAD_FAILED
     ret
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    push dword str_total_mem            ; Display total available memory in MB.
-    call vga_prints                     ; TODO: Maybe eventually test to make sure that at least 2MB are available.
-    xor  edx, edx
-    mov  eax, dword [available_memory_size]
-    mov  ecx, 1048576   ; Divide by 1024*1024 to get MB value.
-    div  ecx                
-    push dword eax
-    call vga_printd
-    push dword str_megabytes
-    call vga_prints
-
-    push dword [mmap_avail_entry_count]
-    call vga_printd
-    push byte 0xa
-    call vga_printc
-
-
-    xor ecx, ecx
-    lea edi, [available_memory_map]
-.LOOP:
-    push ecx
-
-    add  edi, 4
-    push dword [es:edi]
-    call vga_printh
-
-    sub  edi, 4
-    push dword [es:edi]
-    call vga_printh
-
-    push byte ':'
-    call vga_printc
-
-    add  edi, 12
-    push dword [es:edi]
-    call vga_printh
-
-    sub  edi, 4
-    push dword [es:edi]
-    call vga_printh
-
-    add edi, 8
-    push byte 0xa
-    call vga_printc
-
-    add  esp, 24   ; CDECL: Clean up all 24 bytes from C calls at once.
-
-    pop  ecx
-    inc  ecx
-    cmp  ecx, dword [mmap_avail_entry_count]
-    jl  .LOOP
-
-
-
-
-
-
-
-
-
-
-
-
-
-.LOOP:
-    dec  ecx                ; This value (255, 254, ... 0) will be our interrupt number.
-    
-    ; Prepare to call IDT_SET_GATE(interrupt_number, handler_address)
-    ; The cdecl calling convention pushes arguments onto the stack from right to left.
-    push ecx                ; Push the first argument (interrupt_number), which is our counter (ECX).
-    push eax                ; Push the second argument (handler_address), which is in EAX.
-    call IDT_SET_GATE
-    
-    ; --- Clean up the stack after the call ---
-    ; We pushed EAX and ECX (8 bytes total), but IDT_SET_GATE
-    ; doesn't clean up its own stack arguments (per cdecl).
-    ; We can't just use `add esp, 8` here because we need the values
-    ; back in their registers for the loop.
-    pop  eax                ; Restore the handler address to EAX for the next loop iteration.
-    pop  ecx                ; Restore the counter to ECX.
-    test ecx, ecx           ; Check if ECX is zero.
-    jnz .LOOP
 
 
 
@@ -445,343 +316,6 @@ PARSE_ELF_AND_RELOCATE:
     jl .LOOP3
 
     ret
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-kernel_entry_point:   dd 0          ; Entry point address defined in the elf header.
-program_header_count: dw 0          ; ...
-filesz: dw 0
-memsz:  dw 0
-bsssz:  dw 0
-physical_address: dd 0
-;
-PARSE_ELF_AND_RELOCATE:
-
-    ; This will be used to parse the headers.
-    xor si, si
-    mov gs, si
-    mov si, kernel_addr_tmp ; 4000h is where the LOAD_KERNEL routine loaded the kernel.
-
-    ; This will be used as the source address in lower mem.
-    xor bx, bx
-    mov es, bx
-    mov bx, kernel_addr_tmp + 0x1000    ; Skip past headers as well.
-
-    ; This will be used as the destination address in upper mem.
-    mov di, 0xfA00          ; Set up destination segment:offset.
-    mov fs, di
-    mov di, 0x6000          ; We are putting our kernel at 0x100000 or FA00:6000   
-
-    ; Check the magic to see if valid elf file.
-    mov al, byte [gs:si]
-    cmp al, 0x7f
-    jne ELF_PARSE_FAILED
-    mov al, byte [gs:si + 1]
-    cmp al, 'E'
-    jne ELF_PARSE_FAILED 
-    mov al, byte [gs:si + 2]
-    cmp al, 'L'
-    jne ELF_PARSE_FAILED
-    mov al, byte [gs:si + 3]
-    cmp al, 'F'
-    jne ELF_PARSE_FAILED
-
-    ; Get the kernel offset address address from the header.
-    mov  eax, [gs:si + ELF32_HDR.e_entry]
-    mov [kernel_entry_point], eax
-;    nop
-;    mov  dx, [kernel_entry_point + 2]
-;    call BIOS_PRINTH
-;    mov  dx, [kernel_entry_point]
-;    call BIOS_PRINTH
-;    mov  al, ' '
-;    call BIOS_PRINTC
-
-    ; Get the program header count.
-    mov dx, [gs:si + ELF32_HDR.e_phnum]
-    mov [program_header_count], dx
-;    nop
-;    call BIOS_PRINTH
-;    call BIOS_PRINTNL
-
-    ; Let's skip past the header now and start reading program headers.
-    add si, ELF32_HDR_size
-
-    ; Loop through each program header.
-    xor cx, cx
-PE_LOOP:
-    ; Check if PT_LOAD == 1
-    mov eax, [gs:si + ELF32_PHDR.p_type]
-    cmp eax, 1
-    jne SKIP_PH
-;    nop
-;    mov  dx, [gs:si + ELF32_PHDR.p_type]
-;    call BIOS_PRINTH
-;    mov  al, ' '
-;    call BIOS_PRINTC
-
-    ; For now we will just get lower 16bits of the memsz and filesz to fill in.
-    mov dx, word [gs:si + ELF32_PHDR.p_memsz]
-    mov [memsz], dx
-;    nop
-;    call BIOS_PRINTH
-;    mov  al, ' '
-;    call BIOS_PRINTC
-    ;
-    mov dx, word [gs:si + ELF32_PHDR.p_filesz]
-    mov [filesz], dx  
-;    nop
-;    call BIOS_PRINTH
-;    mov  al, ' '
-;    call BIOS_PRINTC
-
-    ; ...
-    mov eax, [gs:si + ELF32_PHDR.p_paddr]
-    mov [physical_address], eax
-
-    ; Write the bytes to the destination address.
-    push cx     ; Save cx since being used for program_header_count.
-    xor  cx, cx
-.LOOP:
-    mov al, byte [es:bx]
-    mov byte [fs:di], al    
-    inc di
-    inc bx                  ; TODO: Change this to use the rep instruction.
-    inc cx
-    cmp cx, word [memsz]
-    jl .LOOP
-    pop cx
-
-    ; Take away what the previous loop incremented for easier calculation.
-    sub bx, word [memsz]
-    sub di, word [memsz]
-;    nop
-;    mov  dx, bx
-;    call BIOS_PRINTH
-;    mov  al, ' '
-;    call BIOS_PRINTC
-;    mov  dx, di
-;    call BIOS_PRINTH
-;    mov  al, ' '
-;    call BIOS_PRINTC     
-
-    ; If filesz == memsz , we probably are not padded with zeros.
-    mov ax, [memsz]
-    cmp ax, [filesz]
-    je  SKIP_BSS
-    ; Let's get the difference and store it.
-    sub  ax, [filesz]
-    mov  [bsssz], ax
-;    nop
-;    mov  dx, [bsssz]
-;    call BIOS_PRINTH
-;    call BIOS_PRINTNL
-
-    ; Zero BSS ...
-    push di
-    push cx
-    xor  cx, cx
-    add  di, [filesz]   ; Let's skip past the actual data size to zero .bss
-.LOOP3:
-    mov byte [fs:di], 0
-    inc di
-    inc cx
-    cmp cx, [bsssz]
-    jl .LOOP3
-    pop cx
-    pop di
-
-SKIP_BSS:
-;    nop
-;    call BIOS_PRINTNL
-
-    ; For now we will just skip 0x2000 ahead as it seems the linker adds sections together in 2's.
-    ; Padded at 0x1000
-    ; Maybe I can use the offset and add that to bx and dx and subtract 0x1000?
-    add bx, 0x2000
-    add di, 0x2000
-
-    ; Skip to the next phdr.
-    add si, ELF32_PHDR_size
-
-    ; Check if we are out of phdrs.
-    inc cx
-    cmp cx, [program_header_count]
-    jl  PE_LOOP
-
-    ret
-
-SKIP_PH:
-    ; Skip to the next phdr.
-    add si, ELF32_PHDR_size
-
-    ; ...
-    inc cx
-    cmp cx, [program_header_count]
-    jl  PE_LOOP  
-
-    ret
-
-
-
-
-
-
-
-
-    mov  ecx, 256               ; Set up a loop to initialize all 256 IDT entries with a common stub.
-    mov  eax, ISR_STUB          ; EAX will hold the address of the default "catch-all" handler.
-.LOOP:
-    dec  ecx                ; Decrement our interrupt number.
-    
-    ; Prepare to call IDT_SET_GATE(interrupt_number, handler_address)
-    ; The cdecl calling convention pushes arguments onto the stack from right to left.
-    push ecx                ; Push the first argument (interrupt_number), which is our counter (ECX).
-    push eax                ; Push the second argument (handler_address), which is in EAX.
-    call IDT_SET_GATE
-    
-    ; Clean up the stack after the call.
-    ; We pushed EAX and ECX (8 bytes total), but IDT_SET_GATE
-    ; doesn't clean up its own stack arguments (per cdecl).
-    ; We can't just use `add esp, 8` here because we need the values
-    ; back in their registers for the loop.
-    pop  eax                ; Restore the handler address to EAX for the next loop iteration.
-    pop  ecx                ; Restore the counter to ECX.
-    test ecx, ecx           ; Check if ECX is zero.
-    jnz .LOOP
-
-    ; Loop is finished, all 256 entries now point to isr_stub.
-
-
-
-
-
-ISR_STUB:
-    pusha                   ; Save all general-purpose registers (eax, ecx, etc.)
-
-    push dword str_unhandled
-    call vga_prints         ; Print "Unhandled Interrupt!"
-    add  esp, 4             ; Clean up stack
-
-    ; This is a stub, so we still need to send an EOI (End of Interrupt) just in case this was a hardware interrupt.
-    ; For now we will just send the ACK to both PICs.
-    mov al, 0x20
-    out 0x20, al            ; EOI to PIC1
-    out 0xA0, al            ; EOI to PIC2
-
-    popa                    ; Restore all registers
-    iret                    ; Return from interrupt
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    mov  ecx, 0
-    mov  eax, ISR_0
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 1
-    mov  eax, ISR_1
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 2
-    mov  eax, ISR_2
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 3
-    mov  eax, ISR_3
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 4
-    mov  eax, ISR_4
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 5
-    mov  eax, ISR_5
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 6
-    mov  eax, ISR_6
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 7
-    mov  eax, ISR_7
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 8
-    mov  eax, ISR_8
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 9
-    mov  eax, ISR_9
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 10
-    mov  eax, ISR_10
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 11
-    mov  eax, ISR_11
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 12
-    mov  eax, ISR_12
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 0
-    mov  eax, ISR_0
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 0
-    mov  eax, ISR_0
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 0
-    mov  eax, ISR_0
-    push ecx
-    push eax
-    call IDT_SET_GATE
-    mov  ecx, 0
-    mov  eax, ISR_0
-    push ecx
-    push eax
-    call IDT_SET_GATE
-
 
 
 
