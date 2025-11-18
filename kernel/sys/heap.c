@@ -1,5 +1,4 @@
 #include <kernel.h>
-#include <vga.h>
 #include <string.h>
 
 struct HEAP_info system_heap;
@@ -11,21 +10,16 @@ static uint32_t current_block_address; // This is our "high-water mark"
 void heap_init()
 {
     // For now we just allocate starting 1MB after the kernel offset.
-    // This should always point to main memory(largest mmap region)/
+    // This should always point to main memory(largest mmap region).
     // The system will halt in mmap.c if kernel_base != main_memory_base.
     // Eventually we will remap there and get more sophisticated with this.
     uint32_t base_addr = KERNEL_PHYSICAL_BASE + 0x100000;
+    size_t length = 0x100000;
 
     // Ensure the heap base itself is aligned to our 8-byte boundary
-    if (base_addr % HEAP_ALIGNMENT != 0) 
-    {
+    if (base_addr % HEAP_ALIGNMENT != 0) {
         base_addr = (base_addr + (HEAP_ALIGNMENT - 1)) & ~(HEAP_ALIGNMENT - 1);
     }
-
-    // Subtract what we added to get past the kernel from the full length.
-    // Then divide that by 8. This seems to give about 64MB on a 512MB system.
-    //size_t length = ((available_memory_map[main_memory_index].length_low - 0x100000) / HEAP_ALIGNMENT);
-    size_t length = 0x100000;
 
     // ...
     system_heap.base = base_addr;
@@ -41,29 +35,13 @@ void heap_init()
 /* ... */
 void print_heap_info()
 {
-    vga_prints("offset        size      avail      used         top\n");
-    vga_printh(system_heap.base);
-    vga_prints("h  ");
-    vga_printd(system_heap.size);
-    vga_prints("     ");
-    vga_printd(system_heap.size-system_heap.used);
-    vga_prints("     ");
-    vga_printd(system_heap.used);
-    vga_prints("     ");
-    vga_printh(system_heap.end);
-    vga_prints("h\n");
+    kprintf("offset        size      avail      used         top\n");
+    kprintf("%xh   ",   system_heap.base);
+    kprintf("%d    ",   system_heap.size);
+    kprintf("%d     ",  system_heap.size-system_heap.used);
+    kprintf("%d      ", system_heap.used);
+    kprintf("%xh\n",    system_heap.end);
 }
-
-// ...
-typedef struct {
-    uint32_t size;    // Size of the data payload (not including this header)
-    uint8_t reserved; // 1 = used, 0 = free
-    uint8_t padding[3]; // Pad struct to 8 bytes.
-} malloc_t; 
-
-// Define a minimum block size. 
-// (sizeof(malloc_t) [8] + 16) = 24 bytes. This is fine.
-#define MIN_BLOCK_SPLIT (sizeof(malloc_t) + 16)
 
 /* ... */
 void* malloc(size_t sz)

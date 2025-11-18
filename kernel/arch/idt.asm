@@ -33,11 +33,13 @@ extern ISR_STUB
 extern ISR_ROUTINES
 extern IRQ0_HANDLER      
 extern IRQ1_HANDLER
+extern IRQ4_HANDLER
 extern IRQ14_HANDLER
 
 ;=============================================================================================
 
 IDT_INIT:
+    lidt[IDT_DESC]      ; Load the descriptor. We can do this now and fill it in after.
 
     ; Loop through first 32 ISRs and set the exceptions.
     xor  ecx, ecx
@@ -54,8 +56,9 @@ IDT_INIT:
     inc  ecx
     cmp  ecx, 31        ; Exceptions are 0 - 31.
     jl  .ISR_LOOP
-
-    ; Now, we manually set for the(IRQS 32-48).
+    
+    ; Loop is complete.
+    ; Now, we manually set for the IRQS we want to use.(32-48)
     push dword 32
     push dword IRQ0_HANDLER     ; PIT
     call IDT_SET_GATE
@@ -66,12 +69,16 @@ IDT_INIT:
     call IDT_SET_GATE
     add  esp, 8
     ;
+    push dword 36
+    push dword IRQ4_HANDLER     ; COM1
+    call IDT_SET_GATE
+    add  esp, 8
+    ;
     push dword 46
     push dword IRQ14_HANDLER    ; Primary ATA
     call IDT_SET_GATE
     add esp, 8
 
-    lidt[IDT_DESC]          ; All entries are set. Load the IDT Register (IDTR) with the address and size of our new IDT. The CPU will now use this table.
     ret
 
 ;=============================================================================================

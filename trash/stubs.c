@@ -91,3 +91,58 @@ void vga_update_hud()
 
 	hud_active = 0;
 }
+
+
+
+
+
+
+volatile uint32_t system_uptime_seconds;
+volatile uint32_t system_uptime_minutes;
+volatile uint32_t system_uptime_hours;
+volatile uint32_t system_uptime_days;
+
+
+    // Has a second passed?
+    if(timer_ticks % 100 == 0)
+    {
+        system_uptime_seconds++;
+
+        // Has a minute passed?
+        if(system_uptime_seconds >= 60)
+        {
+            system_uptime_minutes++;
+
+            // Has an hour passed?
+            if(system_uptime_minutes >= 60)
+            {
+                system_uptime_hours++;
+
+                // Has a day passed?
+                if(system_uptime_hours >= 24)
+                {
+                    system_uptime_days++;
+
+                    // TODO: Years.
+
+                    system_uptime_hours = 0;
+                }
+                system_uptime_minutes = 0;
+            }
+            system_uptime_seconds = 0;
+        }
+    }
+
+
+
+
+
+
+
+
+    
+
+
+    // Subtract what we added to get past the kernel from the full length.
+    // Then divide that by 8. This seems to give about 64MB on a 512MB system.
+    //size_t length = ((available_memory_map[main_memory_index].length_low - 0x100000) / HEAP_ALIGNMENT);

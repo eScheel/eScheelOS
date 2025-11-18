@@ -30,7 +30,6 @@ void kshell()
                 kprintf("\n  clear    (Clears the console screen)");
                 kprintf("\n  heapstat (Prints current heap information.)");
                 kprintf("\n  memmap   (Displays the regions of available memory.)");
-                kprintf("\n  uptime   (Prints system uptime as dd:hh:mm:ss)");
                 kprintf("\n  exit     (Exits the kernel shell.)");
             }
 
@@ -49,12 +48,6 @@ void kshell()
             {
                 kprintf("\n\n");
                 mmap_display_available();
-            }
-
-            else if(strncmp(s, "uptime", strlen(s))==0)
-            {
-                kprintf("\nSystem Uptime: %d:%d:%d:%d", system_uptime_days, system_uptime_hours, \
-                                                        system_uptime_minutes, system_uptime_seconds);
             }
 
             else if(strncmp(s, "exit", strlen(s))==0)

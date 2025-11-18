@@ -72,22 +72,6 @@ KERNEL_INIT:
     push dword str_okay
     call vga_prints
     add  esp, 8
-
-    ; Initialize pit timer.
-    push dword str_pit_init
-    call vga_prints
-    call timer_init
-    push dword str_okay
-    call vga_prints
-    add  esp, 8
-
-    ; Initialize keyboard driver.
-    push dword str_kbd_init
-    call vga_prints
-    call keyboard_init
-    push dword str_okay
-    call vga_prints
-    add  esp, 8
     
     ; Initialize system paging.
     push dword str_page_init
@@ -105,6 +89,22 @@ KERNEL_INIT:
     push dword str_okay
     call vga_prints
     add  esp, 4
+
+    ; Initialize pit timer.
+    push dword str_pit_init
+    call vga_prints
+    call timer_init
+    push dword str_okay
+    call vga_prints
+    add  esp, 8
+
+    ; Initialize keyboard driver.
+    push dword str_kbd_init
+    call vga_prints
+    call keyboard_init
+    push dword str_okay
+    call vga_prints
+    add  esp, 8
 
     ; Probably ok to enable interrupts now.
     sti

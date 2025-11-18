@@ -21,24 +21,28 @@ static char scancode_to_ascii_shifted[] = {                                     
     '4', '5', '6', '+', '1', '2', '3', '0', '.',
 };
 
-static uint8_t shift_key_pressed = 0; 
-//static uint8_t caps_key_pressed  = 0;
+static uint8_t shift_key_pressed; 
+//static uint8_t caps_key_pressed;
 
 char keyboard_input_buffer[1024];
-static size_t keyboard_buffer_index = 0;
+static size_t keyboard_buffer_index;
 
+/* Initialize the keyboard. */
 void keyboard_init()
 {
-    memset(keyboard_input_buffer, 0, 1024);
+    shift_key_pressed = 0;
+    keyboard_reset_buffer();
     return;
 }
 
+/* Allows callers to reset the keyboard buffer for next use. */
 void keyboard_reset_buffer()
 {
     memset(keyboard_input_buffer, 0, 1024);
     keyboard_buffer_index = 0;
 }
 
+/* ... */
 void keyboard_interrupt_handler()
 {
     // Lowest bit of status will be set if buffer is not empty
@@ -57,12 +61,11 @@ void keyboard_interrupt_handler()
             {
                 shift_key_pressed = 0;
             }
+            // ...
             return;
         }
 
-        //vga_printh(scancode);
-
-        // Handle Key Press.
+        // Handle shift key press.
         if(scancode == left_shift_pressed 
         || scancode == right_shift_pressed)
         {
@@ -70,7 +73,7 @@ void keyboard_interrupt_handler()
             return;
         }
 
-        // Handle Key Press (Character).
+        // Handle regular key press. (Character).
         char c;
         if(!shift_key_pressed)
         {

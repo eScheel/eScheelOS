@@ -10,10 +10,12 @@ section .text
 global REMAP_PICS
 global IRQ1_HANDLER
 global IRQ0_HANDLER
+global IRQ4_HANDLER
 global IRQ14_HANDLER
 
 extern keyboard_interrupt_handler
 extern timer_interrupt_handler
+extern com1_interrupt_handler
 extern ide_interrupt_handler
 
 ;=============================================================================================
@@ -75,8 +77,17 @@ IRQ0_HANDLER:
 IRQ1_HANDLER:
     pusha                               ; Save all general-purpose registers
     call keyboard_interrupt_handler 
-    mov al, 0x20                        ; ACK PIC1 for the interrupt to stop firing.
-    out 0x20, al
+    mov  al, 0x20                        ; ACK PIC1 for the interrupt to stop firing.
+    out  0x20, al
+    popa                                ; Restore all registers
+    iret                                ; Return from interrupt
+
+; This is the handler for IRQ 4 (COM1)
+IRQ4_HANDLER:
+    pusha                               ; Save all general-purpose registers
+    call com1_interrupt_handler 
+    mov  al, 0x20                       ; ACK PIC1 for the interrupt to stop firing.
+    out  0x20, al
     popa                                ; Restore all registers
     iret                                ; Return from interrupt
 
@@ -84,9 +95,9 @@ IRQ1_HANDLER:
 IRQ14_HANDLER:
     pusha                               ; Save all general-purpose registers
     call ide_interrupt_handler
-    mov al, 0x20                        ; ACK PIC2 for the interrupt to stop firing.
-    out 0xa0, al
-    mov al, 0x20                        ; ACK PIC1 either way.
-    out 0x20, al
+    mov  al, 0x20                        ; ACK PIC2 for the interrupt to stop firing.
+    out  0xa0, al
+    mov  al, 0x20                        ; ACK PIC1 either way.
+    out  0x20, al
     popa                                ; Restore all registers
     iret                                ; Return from interrupt
