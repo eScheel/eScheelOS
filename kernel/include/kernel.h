@@ -17,6 +17,11 @@ struct SMAP_entry {
 }__attribute__((packed));
 
 typedef struct {
+    uint32_t count;
+    struct SMAP_entry entries[SMAP_entry_max];
+}__attribute__((packed)) mmap_descriptor_t;
+
+typedef struct {
     uint32_t base_low;
     uint32_t base_high;
     uint32_t length_low;
@@ -25,11 +30,6 @@ typedef struct {
 
 extern uint8_t main_memory_index;
 extern memory_region_t available_memory_map[];
-
-typedef struct {
-    uint32_t count;
-    struct SMAP_entry entries[SMAP_entry_max];
-}__attribute__((packed)) mmap_descriptor_t;
 
 extern void mmap_display_available();
 

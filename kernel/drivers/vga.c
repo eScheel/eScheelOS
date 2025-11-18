@@ -1,32 +1,52 @@
 #include <kernel.h>
 #include <vga.h>
 
-static struct video_graphics_array {
-	size_t cursor_x;
-	size_t cursor_y;
-	uint8_t color;
-}vga;
+struct video_graphics_array {
+	uint16_t* terminal_buffer;
+	uint8_t   color;
+	uint16_t  cursor_x;
+	uint16_t  cursor_y;
+}/*__attribute__((packed))*/;
 
-static uint16_t* terminal_buffer = (uint16_t*)VGA_MEMORY;
+// Main VGA? The idea is to have multiple of these in the future.
+static struct video_graphics_array vga;
 
-size_t vga_get_x()
+/* Get the current position of cursor_x */
+uint16_t vga_get_x()
 {
 	return(vga.cursor_x);
 }
 
-size_t vga_get_y()
+/* Get the current position of cursor_y */
+uint16_t vga_get_y()
 {
 	return(vga.cursor_y);
 }
 
+/* Set the current position of cursor_x */
+void vga_set_x(uint16_t x)
+{
+	vga.cursor_x = x;
+}
+
+/* Set the current position of cursor_y */
+void vga_set_y(uint16_t y)
+{
+	vga.cursor_y = y;
+}
+
+/* Set the current screen color. */
 void vga_set_color(uint8_t c)
 {
 	vga.color = c;
+	// TODO: Save current screen, clear with new color, load current screen again.
 }
 
 /* Initialize the vga memory. */
 void vga_init() 
 {
+	vga_disable_cursor();
+	vga.terminal_buffer = (uint16_t*)VGA_MEMORY;
 	vga.color = 0x1f;
 	
 	// Clear the screen.
@@ -35,41 +55,33 @@ void vga_init()
 		for(vga.cursor_x = 0; vga.cursor_x < VGA_WIDTH; vga.cursor_x++) 
         {
 			const size_t index = vga.cursor_y * VGA_WIDTH + vga.cursor_x;
-			terminal_buffer[index] = (uint16_t)' ' | (uint16_t)(vga.color << 8);
+			vga.terminal_buffer[index] = (uint16_t)' ' | (uint16_t)(vga.color << 8);
 		}
 	}
 
 	// Reset position.
     vga.cursor_y = 0;
     vga.cursor_x = 0;
-
-	// We can disable the cursor for now.
-	vga_disable_cursor();
-    return;
 }
 
 /* ... */
 void vga_update_cursor()
 {
-	/* 
-	 * The equation for finding the index in a linear chunk of memory.
-	 * 	Index = [(y * width) + x]
-	 */
+	// The equation for finding the index in a linear chunk of memory.
+	// Index = [(y * width) + x]
 	uint16_t index = vga.cursor_y * VGA_WIDTH + vga.cursor_x;
-	/* 
-	 *  This sends a command to indicies 14 and 15 in the
-	 *  CRT Control Register of the VGA controller. These
-	 *  are the high and low bytes of the index that show
-	 *  where the hardware cursor is to be 'blinking'.
-	 */
+
+	// This sends a command to indicies 14 and 15 in the
+	// CRT Control Register of the VGA controller. These
+	// are the high and low bytes of the index that show
+	// where the hardware cursor is to be 'blinking'.
 	OUTB(0x3D4, 14);
 	OUTB(0x3D5, (index >> 8));
 	OUTB(0x3D4, 15);
 	OUTB(0x3D5, index);
-	return;
 }
 
-/* ... */
+/* Enables the blinky cursor. */
 void vga_enable_cursor()
 {
 	OUTB(0x3D4, 0x0A);
@@ -78,35 +90,35 @@ void vga_enable_cursor()
 	OUTB(0x3D5, (INB(0x3D5) & 0xE0) | 15);
 }
 
-/* ... */
+/* Disabled the blinky cursor. */
 void vga_disable_cursor()
 {
 	OUTB(0x3D4, 0x0A);
 	OUTB(0x3D5, 0x20);
 }
 
-/* ... */
+/* Scroll the screen when reaching the bottom. */
 static void vga_scroll()
 {
 	if(vga.cursor_y == VGA_HEIGHT)
 	{
 		size_t i;
-		uint16_t blank = (uint16_t)' ' | (uint16_t)(vga.color << 8);
 
 		// Move all rows up by one.
 		// We loop 24 times (VGA_HEIGHT - 1).
-		for (i = 0; i < (VGA_HEIGHT - 1) * VGA_WIDTH; i++)
+		for(i=0; i<(VGA_HEIGHT-1)*VGA_WIDTH; i++)
 		{
-			// terminal_buffer[i] = the cell on the current row
-			// terminal_buffer[i + VGA_WIDTH] = the cell on the *next* row
-			terminal_buffer[i] = terminal_buffer[i + VGA_WIDTH];
+			// terminal_buffer[i] = the cell on the current row.
+			// terminal_buffer[i + VGA_WIDTH] = the cell on the next row.
+			vga.terminal_buffer[i] = vga.terminal_buffer[i + VGA_WIDTH];
 		}
 
 		// Clear the last row.
 		// 'i' is already at the start of the last row: (VGA_HEIGHT - 1) * VGA_WIDTH
-		for ( ; i < VGA_HEIGHT * VGA_WIDTH; i++)
+		for(; i<(VGA_HEIGHT*VGA_WIDTH); i++)
 		{
-			terminal_buffer[i] = blank;
+			// Fill in entire screen with blanks.
+			vga.terminal_buffer[i] = ((uint16_t)' ' | (uint16_t)(vga.color << 8));;
 		}
 
 		// Reset the vga cursor state to the beginning of the last line.
@@ -115,7 +127,7 @@ static void vga_scroll()
 	}
 }
 
-/* ... */
+/* Clear the screen on demand. */
 void vga_clear()
 {
 	// Clear the screen.
@@ -124,42 +136,24 @@ void vga_clear()
 		for(vga.cursor_x = 0; vga.cursor_x < VGA_WIDTH; vga.cursor_x++) 
         {
 			const size_t index = vga.cursor_y * VGA_WIDTH + vga.cursor_x;
-			terminal_buffer[index] = (uint16_t)' ' | (uint16_t)(vga.color << 8);
+			vga.terminal_buffer[index] = ((uint16_t)' ' | (uint16_t)(vga.color << 8));
 		}
 	}
 
 	// Reset cursor position.
     vga.cursor_y = 0;
     vga.cursor_x = 0;
-	vga_update_cursor();
-    return;
 }
 
-/* ... */
+/* Put a character on the screen at a specific location. */
 void vga_putc(char c, size_t x, size_t y)
 {
 	uint16_t index = y * VGA_WIDTH + x;
-	terminal_buffer[index] = (uint16_t)c | (uint16_t)(vga.color << 8);
+	vga.terminal_buffer[index] = ((uint16_t)c | (uint16_t)(vga.color << 8));
 	return;
 }
 
-/* ... */
-void vga_puts(const char *s, size_t x, size_t y)
-{
-	for(size_t i=0; s[i]!=0; i++)
-	{
-		vga_putc(s[i], x, y);
-		
-		x++;
-		if(x == VGA_WIDTH)
-		{
-			x  = 0;
-			y += 1;		// TODO: Handle scrolling.
-		}
-	}
-}
-
-/* ... */
+/* Prints the next sequential character to the screen. */
 void vga_printc(char c) 
 {
 	// Obtain the current cursor location and index.
@@ -203,15 +197,18 @@ void vga_printc(char c)
 		{
 			vga.cursor_x -= 1;
 		}
-		terminal_buffer[index-1] = ((uint16_t)' ' | (uint16_t)(vga.color << 8));
+
+		// Print the backspace character.
+		vga.terminal_buffer[index-1] = ((uint16_t)' ' | (uint16_t)(vga.color << 8));
 		goto end_vga_printc;
 	}
 
-	terminal_buffer[index] = ((uint16_t)c | (uint16_t)(vga.color << 8));
-	vga.cursor_x += 1;
+	// Nothing to handle, just print the character.
+	vga.terminal_buffer[index] = ((uint16_t)c | (uint16_t)(vga.color << 8));
+	vga.cursor_x += 1;	// Increment the x position.
 
 	// Check if we are at the the right edge of the screen.
-	if (vga.cursor_x == VGA_WIDTH) 
+	if(vga.cursor_x == VGA_WIDTH) 
     {
 		vga.cursor_x = 0;
 		vga.cursor_y += 1;
@@ -219,20 +216,19 @@ void vga_printc(char c)
 
 end_vga_printc:
 	vga_scroll();
-    return;
 }
 
-/* ... */
+/* Prints a sequential string of characters to the screen. */
 void vga_prints(const char* data) 
 {
-	// ...
+	// We print until a null value is reached.
 	for(size_t i = 0; data[i]!='\0'; i++)
     {
         vga_printc(data[i]);
     }
 }
 
-/* ... */
+/* Converts a string to 32bit hex value and then prints it out. */
 void vga_printh(uint32_t h)
 {
 	int i;
@@ -256,10 +252,9 @@ void vga_printh(uint32_t h)
 	// Let's NULL termiate the string now before we try to print it.
 	hexstr[n] = '\0';
 	vga_prints(hexstr);
-	return;
 }
 
-/* ... */
+/* Converts a string to 32bit decimal value and then prints it out. */
 void vga_printd(uint32_t d)
 {
     char buffer[11];
@@ -293,6 +288,4 @@ void vga_printd(uint32_t d)
         index--;
         vga_printc(buffer[index]);
     }
-
-	return;
 }

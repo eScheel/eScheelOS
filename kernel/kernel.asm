@@ -69,7 +69,21 @@ KERNEL_INIT:
     call vga_prints
     call REMAP_PICS
     call IDT_INIT
+    push dword str_okay
+    call vga_prints
+    add  esp, 8
+
+    ; Initialize pit timer.
+    push dword str_pit_init
+    call vga_prints
     call timer_init
+    push dword str_okay
+    call vga_prints
+    add  esp, 8
+
+    ; Initialize keyboard driver.
+    push dword str_kbd_init
+    call vga_prints
     call keyboard_init
     push dword str_okay
     call vga_prints
@@ -161,6 +175,8 @@ str_kern_init: db "Initializing the kernel:",0xa,0
 str_mmap_init: db "  bios memory map .... ",0
 str_intr_init: db "  interrupts ......... ",0
 str_page_init: db "  identity paging .... ",0
+str_pit_init:  db "  pit timer .......... ",0
+str_kbd_init:  db "  keyboard driver .... ",0
 str_heap_init: db "  system heap ........ ",0
 str_pci_probe: db "  pci devices ........ ",0
 str_ide_init:  db "  ide driver ......... ",0

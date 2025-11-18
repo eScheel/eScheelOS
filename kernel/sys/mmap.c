@@ -5,16 +5,16 @@ uint8_t main_memory_index;
 memory_region_t available_memory_map[SMAP_entry_max];
 
 static size_t mmap_avail_entry_count;
-uint64_t total_memory_size; // Use uint64_t for total memory calculation.
+static uint64_t total_memory_size;
 
 /*
 * Initializes the system memory map.
 *
-* This function takes the memory map provided by the BIOS (via stage2.asm)
-* and parses it into a clean, kernel-usable array ('available_memory_map').
+* This function takes the memory map provided by the BIOS.
+* and parses it into the available_memory_map type structure.
 *
-* It also finds the largest usable memory block in the first 4GB
-* and stores its index in 'main_memory_index' for the heap.
+* It also finds the largest usable memory block,
+* and stores its index in main_memory_index for the heap and others to reference.
 */
 void memory_map_init(mmap_descriptor_t* mmap_desc)
 {
@@ -27,18 +27,17 @@ void memory_map_init(mmap_descriptor_t* mmap_desc)
     // Get the address of the first entry from the struct.
     struct SMAP_entry* entry_array = mmap_desc->entries;
 
-    // Parse BIOS entries and fill our global 'available_memory_map'
-    for(size_t i=0; i < num_entries; i++)
+    // Parse BIOS entries and fill our global available_memory_map
+    for(size_t i=0; i<num_entries; i++)
     {
         struct SMAP_entry* entry = &entry_array[i];
 
-        // If it's not available (Type 1), skip it.
+        // If it's not available, skip it.
         if(entry->type != 0x01) { continue; }
 
-        // ...
+        // Fill in the available_memory_map structure.
         if(mmap_avail_entry_count < SMAP_entry_max)
         {
-            // Write directly into the 'available_memory_map'
             available_memory_map[mmap_avail_entry_count].base_low = entry->base_addr_low;
             available_memory_map[mmap_avail_entry_count].base_high = entry->base_addr_high;
             available_memory_map[mmap_avail_entry_count].length_low = entry->length_low;
@@ -48,31 +47,32 @@ void memory_map_init(mmap_descriptor_t* mmap_desc)
     }
 
     total_memory_size = 0;
-    uint32_t largest_base_size = 0;
+    uint64_t largest_base_size = 0;
 
-    // Find the largest block for the heap and print all available regions.
-    for(size_t i = 0; i < mmap_avail_entry_count; i++)
+    // Find the largest block available.
+    for(size_t i=0; i<mmap_avail_entry_count; i++)
     {
+        // ...
         memory_region_t mmap_region = available_memory_map[i];
 
-        // Finds the largest memory block that is *entirely within the first 4GB* (base_high == 0 and length_high == 0), 
-        if(mmap_region.base_high == 0 && mmap_region.length_high == 0)
+        // We deal with 64bit values from BIOS memory map.
+        uint64_t region_size = ((uint64_t)mmap_region.length_high << 32) | mmap_region.length_low;
+
+        // Is this region bigger than the biggest one so far?
+        if(region_size > largest_base_size)
         {
-            if(mmap_region.length_low > largest_base_size)
-            {
-                largest_base_size = mmap_region.length_low;
-                main_memory_index = i;
-            }
+            // Reset the biggest one so far to the bigger one.
+            largest_base_size = region_size;
+            main_memory_index = i;  // Save the index for others to use.
         }
 
-        // 64-bit arithmetic to calculate region size. (high_bits << 32) | low_bits
-        uint64_t region_size = ((uint64_t)mmap_region.length_high << 32) | mmap_region.length_low;
+        // Add it to our total memory size value.
         total_memory_size += region_size;
     }
 
-    /* 
+    /** 
      * I've tried to extern kernel_offset from link.ld, but it does not seem to have the correct value.
-     * Our boot loader will load the kernel at 0x100000 anyway ... So we test if main_memory_offset equals.
+     * Our boot loader will load the kernel at 0x100000 anyway ... So we test if main_memory_offset equals that.
      */
     if(available_memory_map[main_memory_index].base_low != KERNEL_PHYSICAL_BASE)
     {
@@ -85,14 +85,13 @@ void memory_map_init(mmap_descriptor_t* mmap_desc)
     }
 }
 
+/* Displays the available memory regions. */
 void mmap_display_available()
 {
     // Find the largest block for the heap and print all available regions.
     for(size_t i = 0; i < mmap_avail_entry_count; i++)
     {
         memory_region_t mmap_region = available_memory_map[i];
-
-        // Now let's display available memory regions.
         vga_printh(mmap_region.base_high);
         vga_printh(mmap_region.base_low);
         vga_prints(":");
