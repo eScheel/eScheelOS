@@ -13,6 +13,7 @@ static uint16_t ide_control_port  = 0x3F6; // Primary Bus
 // Since our ide driver is hard-coded to the Primary IDE channel's ports (0x1F0, 0x3F6), 
 // we only need to worry about 128 (Master) and 129 (Slave).
 struct ata_identify ata_ident[2];
+static uint8_t drives[2];
 
 /* Waits ~400ns by reading the alternate status port 4 times. */
 static void ide_delay_400ns()
@@ -25,7 +26,7 @@ static void ide_delay_400ns()
 
 /* Initialize IDE drives. */
 void ide_init()
-{    
+{  
     int controller_found = 0;
 
     // Iterate all devices in the header structure until we find a controller..
@@ -50,6 +51,9 @@ void ide_init()
         vga_prints("No capable legacy IDE controller found.\n");
         SYSTEM_HALT();
     }
+
+    drives[0] = 0;
+    drives[1] = 0; 
 
     // Look for any master or slave.
     for(int i=0; i<2; i++)
@@ -122,6 +126,8 @@ void ide_init()
         // Let's use the buffer we just captured to fill in our ident structure.
         memset(&ata_ident[i], 0, sizeof(struct ata_identify));
         memcpy(identify_buffer, &ata_ident[i], sizeof(struct ata_identify));
+
+        drives[i] = 1;
     }
 }
 
@@ -147,11 +153,7 @@ static int ide_wait_for_ready()
  */
 int ide_read_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buffer)
 {
-    // Wait for the drive to be ready
-    if(ide_wait_for_ready() != 0)
-    {
-        return(-1);
-    }
+    if(drives[drive] == 0) { return(-1); }
 
     // This variable will hold 0b11100000 (Master) or 0b11110000 (Slave)
     uint8_t drive_cmd;
@@ -168,6 +170,10 @@ int ide_read_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buf
     // Select drive (Master or Slave) and set LBA mode
     OUTB(ide_data_port + ATA_REG_DRIVE, drive_cmd | ((lba >> 24) & 0x0F));
     ide_delay_400ns();
+
+    // After selecting a drive (writing to 0x1F6), 
+    // we must wait for that specific drive to report it is ready before sending the Sector Count and LBA registers.
+    if(ide_wait_for_ready() != 0) { return(-1); }
     
     // Send sector count
     OUTB(ide_data_port + ATA_REG_SECCOUNT, num_sectors);
@@ -182,7 +188,7 @@ int ide_read_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buf
 
     // Read the data, one sector at a time
     uint16_t* read_buffer = (uint16_t*)buffer;
-    for (int s = 0; s < num_sectors; s++)
+    for(int s=0; s<num_sectors; s++)
     {
         // Wait for the drive to be ready with the data
         while(1) 
@@ -225,11 +231,7 @@ static int ide_wait_for_drq()
 /* Writes num_sectors from lba from buffer. */
 int ide_write_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buffer)
 {
-    // Wait for the drive to be ready
-    if(ide_wait_for_ready() != 0) 
-    {
-        return(-1);
-    }
+    if(drives[drive] == 0) { return(-1); }
 
     // This variable will hold 0b11100000 (Master) or 0b11110000 (Slave)
     uint8_t drive_cmd;
@@ -246,6 +248,10 @@ int ide_write_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* bu
     // Select drive (Master or Slave) and set LBA mode
     OUTB(ide_data_port + ATA_REG_DRIVE, drive_cmd | ((lba >> 24) & 0x0F));
     ide_delay_400ns();
+
+    // After selecting a drive (writing to 0x1F6), 
+    // we must wait for that specific drive to report it is ready before sending the Sector Count and LBA registers.
+    if(ide_wait_for_ready() != 0) { return(-1); }
     
     // Send sector count
     OUTB(ide_data_port + ATA_REG_SECCOUNT, num_sectors);
@@ -285,6 +291,9 @@ int ide_write_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* bu
 // This is the function called by IRQ14_HANDLER
 void ide_interrupt_handler()
 {
+    // TODO: Work on switching to interrupt based as opposed to polling. I am having the most trouble.
+    //       Once I get tasking down to a tee, then I should come back here and work on interrupts.
+    //       Because I will need to stop a specific task as opposed to the whole cpu.
     //vga_printc('*');
     
     // For now, we just acknowledge the interrupt.

@@ -30,7 +30,7 @@ void kernel_main()
     ide_write_sectors(1, 0, 100, temp);
     free(temp);
     */
-
+    
     // ...
     while(1) 
     { 

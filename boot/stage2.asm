@@ -18,7 +18,7 @@
 jmp short ENTRY
 
 kernel_addr_tmp equ 0x4000      ; Temporary address in low memory to hold the kernel while we parse elf.
-kernel_size equ 32768
+kernel_size equ 36864
 kernel_lba  equ 9               ; LBA for kernel.elf on disk.
 
 video_mode: db 0    ; Default video mode passed to kernel via al register.

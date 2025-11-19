@@ -205,7 +205,7 @@ void vga_printh(uint32_t h)
         }
 
 
-        /* Helper function to wait for the drive to request data (DRQ) */
+/* Helper function to wait for the drive to request data (DRQ) */
 static int ide_wait_for_drq()
 {
     uint8_t status = 0;
