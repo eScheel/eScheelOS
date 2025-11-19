@@ -14,7 +14,7 @@
 #define ATA_REG_LBA_LOW    0x03
 #define ATA_REG_LBA_MID    0x04
 #define ATA_REG_LBA_HIGH   0x05
-#define ATA_REG_DRIVE      0x06 // Selects Drive (Master/Slave)
+#define ATA_REG_DRIVE      0x06     // Selects Drive (Master/Slave)
 #define ATA_REG_STATUS     0x07
 #define ATA_REG_COMMAND    0x07
 
@@ -39,6 +39,7 @@
 #define ATA_SELECT_SLAVE   0xB0
 
 // Represents the 512-byte data block returned by ATA_CMD_IDENTIFY
+// ATA-1
 struct ata_identify {
     uint16_t config;                // Word 0
     uint16_t cylinders;             // Word 1
@@ -73,10 +74,10 @@ struct ata_identify {
     uint16_t command_sets_supported;// Word 83 (Bit 10 = LBA48 support)
     uint16_t reserved84_99[16];     // Word 84-99
     uint64_t total_sectors_48bit;   // Word 100-103 (64-bit value)
-    // ... (the rest is irrelevant for now) ...
+    // ...
 } __attribute__((packed));
 
-int ide_read_sectors(uint32_t lba, uint8_t num_sectors, void* buffer);
-int ide_write_sectors(uint32_t lba, uint8_t num_sectors, void* buffer);
+int ide_read_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buffer);
+int ide_write_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buffer);
 
 #endif // __IDE_H

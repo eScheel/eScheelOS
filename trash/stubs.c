@@ -171,3 +171,54 @@ void vga_printh(uint32_t h)
     // Subtract what we added to get past the kernel from the full length.
     // Then divide that by 8. This seems to give about 64MB on a 512MB system.
     //size_t length = ((available_memory_map[main_memory_index].length_low - 0x100000) / HEAP_ALIGNMENT);
+
+
+
+
+
+
+
+
+        // Check if bit 9 of capabilites is set for LBA28.
+        if(ata_ident[i].capabilities & 0x200)
+        {
+            
+        }
+        else
+        {
+            vga_prints("LBA28 not supported!\n");
+            continue;
+        }
+
+
+
+        // Wait for the drive to be ready with the data
+        while(1) 
+        {
+            uint8_t status = INB(ide_data_port + ATA_REG_STATUS);
+            if (status & ATA_SR_ERR) 
+            { 
+                vga_prints("\nRead Error!"); 
+                return(-1); 
+            }
+            if (status & ATA_SR_DRQ) { break; } // Data is ready!
+        }
+
+
+        /* Helper function to wait for the drive to request data (DRQ) */
+static int ide_wait_for_drq()
+{
+    uint8_t status = 0;
+    while(1) 
+    {
+        status = INB(ide_data_port + ATA_REG_STATUS);
+        if(status & ATA_SR_ERR) { vga_prints("\nIDE Error waiting for DRQ!\n"); return(-1); }
+        if(status & ATA_SR_DF)  { vga_prints("\nIDE Drive Fault waiting for DRQ!\n"); return(-1); }
+        if(status & ATA_SR_DRQ) { break; } // Data is ready!
+    }
+    return 0;
+}
+
+
+        // Wait for the drive to be ready *for the data* (DRQ)
+        if(ide_wait_for_drq() != 0) { return(-1); }

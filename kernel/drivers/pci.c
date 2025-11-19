@@ -95,12 +95,15 @@ void pci_probe_devices()
                     pci_device_hdr[index].latency_timer   = (regC >> 8)  & 0xff;
                     pci_device_hdr[index].cache_line_size = (regC & 0xff);
 
-                    pci_device_hdr[index].bar0 = pci_conf_read_dword(bus, slot, func, 0x10);
-                    pci_device_hdr[index].bar1 = pci_conf_read_dword(bus, slot, func, 0x14);
-                    pci_device_hdr[index].bar2 = pci_conf_read_dword(bus, slot, func, 0x18);
-                    pci_device_hdr[index].bar3 = pci_conf_read_dword(bus, slot, func, 0x1c);
-                    pci_device_hdr[index].bar4 = pci_conf_read_dword(bus, slot, func, 0x20);
-                    pci_device_hdr[index].bar5 = pci_conf_read_dword(bus, slot, func, 0x24);
+                    // For 32-bit Memory Space BARs, you calculate (BAR[x] & 0xFFFFFFF0)
+                    // For I/O Space BARs, you calculate (BAR[x] & 0xFFFFFFFC)
+                    // Am I doing this right?
+                    pci_device_hdr[index].bar0 = pci_conf_read_dword(bus, slot, func, 0x10) & 0xFFFFFFFC;
+                    pci_device_hdr[index].bar1 = pci_conf_read_dword(bus, slot, func, 0x14) & 0xFFFFFFFC;
+                    pci_device_hdr[index].bar2 = pci_conf_read_dword(bus, slot, func, 0x18) & 0xFFFFFFFC;
+                    pci_device_hdr[index].bar3 = pci_conf_read_dword(bus, slot, func, 0x1c) & 0xFFFFFFFC;
+                    pci_device_hdr[index].bar4 = pci_conf_read_dword(bus, slot, func, 0x20) & 0xFFFFFFFC;
+                    pci_device_hdr[index].bar5 = pci_conf_read_dword(bus, slot, func, 0x24) & 0xFFFFFFFC;
 
                     pci_device_hdr[index].cardbus_cis_ptr = pci_conf_read_dword(bus, slot, func, 0x28);
 
@@ -112,9 +115,6 @@ void pci_probe_devices()
 
                     uint32_t reg34 = pci_conf_read_dword(bus, slot, func, 0x34);
                     pci_device_hdr[index].capabilities_ptr = (reg34 & 0xff);
-
-                    // ...
-                    pci_device_hdr[index].reserved2 = pci_conf_read_dword(bus, slot, func, 0x38);
 
                     // ...
                     uint32_t reg3C = pci_conf_read_dword(bus, slot, func, 0x3c);
@@ -138,7 +138,7 @@ void pci_probe_devices()
 }
 
 
-/* Kind of like pciconf -l in FreeBSD. */
+/* Iterate the PCI devices and display information. */
 void pci_conf_display()
 {
     for(int i=0; i<256; i++)
@@ -149,6 +149,7 @@ void pci_conf_display()
             break;
         }
 
+        // Kind of like pciconf -l in FreeBSD.
         kprintf("class=%xh rev=%xh hdr=%xh vendor=%xh dev=%xh subvendor=%xh subdev=%xh\n", \
             pci_device_hdr[i].class_code, pci_device_hdr[i].revision_id, pci_device_hdr[i].hdr_type, pci_device_hdr[i].vendor_id, \
             pci_device_hdr[i].device_id, pci_device_hdr[i].subsys_vendor_id, pci_device_hdr[i].subsystem_id);

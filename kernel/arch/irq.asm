@@ -47,7 +47,7 @@ REMAP_PICS:
     out 0xa1, al
 
     ; Mask interrupts accordingly.
-    mov al, 0xfc        ; 11111100b.
+    mov al, 0xf8        ; 11111000b.
     out 0x21, al        ; Send mask to PIC1
     mov al, 0xbf        ; 10111111b.
     out 0xa1, al        ; Send mask to PIC2

@@ -128,13 +128,10 @@ KERNEL_INIT:
     ; Initialize the IDE driver.
     push dword str_ide_init
     call vga_prints
-    xor  edx, edx
-    mov  dl, byte [boot_drive]
-    push edx
     call ide_init
     push dword str_okay
     call vga_prints
-    add  esp, 12
+    add  esp, 8
 
     ; Initialize serial driver.
     push dword str_rs232_init
