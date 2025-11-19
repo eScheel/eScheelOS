@@ -61,7 +61,7 @@ struct HEAP_info {
     uint32_t size;
     uint32_t used;
     uint32_t end;
-}__attribute__((packed));
+}/*__attribute__((packed))*/;
 
 typedef struct {
     uint32_t size;      // Size of the data payload (not including this header)

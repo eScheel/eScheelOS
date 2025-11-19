@@ -1,5 +1,4 @@
 #include <kernel.h>
-#include <vga.h>
 #include <keyboard.h>
 #include <string.h>
 

@@ -137,6 +137,31 @@ volatile uint32_t system_uptime_days;
 
 
 
+/* Converts a string to 32bit hex value and then prints it out. */
+void vga_printh(uint32_t h)
+{
+	int i;
+	int n = 0;
+	char hexstr[9];
+
+	// Loop through the 32-bit integer, 4 bits (one nibble) at a time.
+    // Start at bit 28 (the most significant nibble) and go down to bit 0.
+	for(i=28; i>=0; i-=4) 
+	{
+		// Isolate the current nibble.
+        // (h >> i): Right-shift the integer to move the desired nibble to the least significant position.
+        //  & 0x0f:   Use a bitwise AND with a mask (binary 00001111) to isolate the 4 bits.
+		uint8_t x = (h >> i) & 0x0f;
+
+		// Convert the numeric value (0-15) of the nibble to its ASCII hex character ('0'-'9', 'A'-'F').
+        // This is done by using the value 'x' as an index into a string literal containing all hex characters.
+		hexstr[n] = "0123456789ABCDEF"[x];
+		n += 1;
+	}
+	// Let's NULL termiate the string now before we try to print it.
+	hexstr[n] = '\0';
+	vga_prints(hexstr);
+}
 
 
 

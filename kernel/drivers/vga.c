@@ -228,28 +228,46 @@ void vga_prints(const char* data)
     }
 }
 
-/* Converts a string to 32bit hex value and then prints it out. */
+/* Converts a string to 32bit hex value and then prints it out (without leading zeros). */
 void vga_printh(uint32_t h)
 {
 	int i;
 	int n = 0;
 	char hexstr[9];
+    
+    // Handle the special case of 0
+    if(h == 0) 
+	{
+        vga_printc('0');
+        return;
+    }
+
+    // Flag to track if we've encountered a non-zero nibble yet
+	int leading_zero = 1;
 
 	// Loop through the 32-bit integer, 4 bits (one nibble) at a time.
     // Start at bit 28 (the most significant nibble) and go down to bit 0.
 	for(i=28; i>=0; i-=4) 
 	{
 		// Isolate the current nibble.
-        // (h >> i): Right-shift the integer to move the desired nibble to the least significant position.
-        //  & 0x0f:   Use a bitwise AND with a mask (binary 00001111) to isolate the 4 bits.
 		uint8_t x = (h >> i) & 0x0f;
-
-		// Convert the numeric value (0-15) of the nibble to its ASCII hex character ('0'-'9', 'A'-'F').
-        // This is done by using the value 'x' as an index into a string literal containing all hex characters.
-		hexstr[n] = "0123456789ABCDEF"[x];
-		n += 1;
+        
+        // Check if this is the first non-zero nibble
+        if(x != 0) 
+		{
+            leading_zero = 0; // Found the first significant digit
+        }
+        
+        // Only start recording characters once the leading zeros are skipped
+        if(!leading_zero) 
+        {
+		    // Convert the numeric value (0-15) to its ASCII hex character.
+		    hexstr[n] = "0123456789ABCDEF"[x];
+		    n += 1;
+        }
 	}
-	// Let's NULL termiate the string now before we try to print it.
+    
+	// NULL terminate the string before printing.
 	hexstr[n] = '\0';
 	vga_prints(hexstr);
 }
