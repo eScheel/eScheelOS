@@ -11,6 +11,7 @@ But it's fun!
 BIOS boot only.
 No concept of any file system. Stage2 is at lba 1 and kernel.elf is at lba 9.
 Was looking at Minix3, but will probably go with FAT32 eventually to ease my way into UEFI.
+If I ever decide to do all that.
 
 -----------------------------------------------------------------------------------
 
