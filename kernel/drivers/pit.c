@@ -24,7 +24,7 @@ void timer_init()
 
     // 0x40: This is the data port for Channel 0.
     OUTB(0x40, divisor & 0xFF);     // Set low byte of divisor
-    OUTB(0x40, divisor >> 8);       // Set high byte of divisor   
+    OUTB(0x40, divisor >> 8);       // Set high byte of divisor
 }
 
 /* ... */

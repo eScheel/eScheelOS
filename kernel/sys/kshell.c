@@ -30,11 +30,13 @@ void kshell()
                 kprintf("\n  clear    (Clears the console screen)");
                 kprintf("\n  heapstat (Prints current heap information.)");
                 kprintf("\n  memmap   (Displays the regions of available memory.)");
-                kprintf("\n  pciconf  (...)");
+                kprintf("\n  pciconf  (List devices captured on the pci bus.)");
+                kprintf("\n  tasklist (Displays a list of currently running tasks.)");
                 kprintf("\n  exit     (Exits the kernel shell.)");
             }
 
-            else if(strncmp(s, "clear", strlen(s))==0)
+            else if(strncmp(s, "clear", strlen(s))==0 \
+                 || strncmp(s, "cls",   strlen(s))==0)
             {
                 vga_clear();
             }
@@ -55,6 +57,12 @@ void kshell()
             {
                 kprintf("\n\n");
                 pci_conf_display();
+            }
+
+            else if(strncmp(s, "tasklist", strlen(s))==0)
+            {
+                kprintf("\n\n");
+                task_list();
             }
 
             else if(strncmp(s, "exit", strlen(s))==0)

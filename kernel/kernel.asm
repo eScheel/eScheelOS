@@ -45,6 +45,9 @@ KERNEL_INIT:
     ; Reinitialize the Global Descriptor Table.
     call GDT_REINIT
 
+    ; We need to set this value early.
+    mov byte [tasking_enabled], 0
+
     ; Initialize graphics array and print for success.
     call vga_init
     call draw_logo
@@ -193,6 +196,7 @@ str_halted:    db "System Halted ...",0
 ;=============================================================================================
 section .data
 
+extern tasking_enabled
 extern page_dir_phys_addr
 
 boot_drive: db 0

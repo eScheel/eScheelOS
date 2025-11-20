@@ -15,7 +15,7 @@ void kernel_main()
 
     // Invoke the shell to begin with for now.
     kprintf("Attempting to start the kernel shell task ... ");
-    if(task_exec(kshell) != 0)
+    if(task_exec(kshell, "kshell") != 0)
     {
         kprintf("Failed to start the kernel shell.\n");
     }

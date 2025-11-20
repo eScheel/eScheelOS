@@ -1,15 +1,14 @@
 #include <kernel.h>
-#include <string.h> // for memset
-#include <pit.h>    // for timer_wait
+#include <string.h>
 
 // The table of all tasks in the system
 static struct task task_table[MAX_TASKS];
 
 // The index of the currently running task in the task_table
-static volatile uint32_t current_task_index = 0;
+static volatile uint32_t current_task;
 
 // Flag to prevent scheduling before tasking is initialized
-static volatile int tasking_enabled = 0;
+volatile uint8_t tasking_enabled;
 
 /* Initializes the multi-tasking system. */
 void tasking_init()
@@ -17,23 +16,25 @@ void tasking_init()
     // Clear the task table
     memset(task_table, 0, sizeof(struct task)*MAX_TASKS);
 
-    // Initialize Task 0 (the kernel_main task)
-    current_task_index = 0;
-    task_table[current_task_index].state = TASK_STATE_RUNNING;
-    task_table[current_task_index].esp   = 0;
-    task_table[current_task_index].stack_base = 0;
+    // Initialize Task 0.
+    const char* name = "kernel_main";
+    current_task = 0;
+    task_table[current_task].state = TASK_STATE_RUNNING;
+    task_table[current_task].esp   = 0;
+    task_table[current_task].stack_base = 0;
+    for(int i=0; i<12; i++)
+    {
+        task_table[current_task].name[i] = name[i];
+    }
 
     // Enable the scheduler
     tasking_enabled = 1;
 }
 
 /* Creates a new task and adds it to the task table. */
-int task_exec(void (*task_function)(void))
+int task_exec(void (*task_function)(void), const char* name)
 {
-    // What if a timer interrupt (IRQ 0) fires exactly in the middle of this function?
     asm volatile("cli");
-
-    // Returns a -1 on failure.
     int task_index = -1;
 
     // Find a free task slot
@@ -53,7 +54,7 @@ int task_exec(void (*task_function)(void))
         return(task_index);
     }
 
-    // Allocate a stack
+    // Allocate a stack for the task.
     uint8_t* stack = (uint8_t*)malloc(STACK_SIZE);
     if(!stack) 
     {
@@ -62,7 +63,7 @@ int task_exec(void (*task_function)(void))
     }
     uint32_t stack_top = (uint32_t)(stack + STACK_SIZE);
 
-    // "Pre-load" the stack
+    // Preload the stack.
     uint32_t* stack_ptr = (uint32_t*)stack_top;
     *--stack_ptr = 0x202;   // EFLAGS (Interrupts Enabled)
     *--stack_ptr = 0x08;    // CODE_SEG
@@ -80,12 +81,16 @@ int task_exec(void (*task_function)(void))
     task_table[task_index].esp = (uint32_t)stack_ptr;
     task_table[task_index].stack_base = (uint32_t)stack;
     task_table[task_index].state = TASK_STATE_RUNNING; // Set as running
+    for(int i=0; name[i]!=0; i++)
+    {
+        task_table[task_index].name[i] = name[i];
+    }
 
     asm volatile("sti");
     return(0); // Success
 }
 
-/* ... */
+/* Cleans up memory and task state for any zombie tasks. */
 static void reaper()
 {
     for(int i = 0; i < MAX_TASKS; i++)
@@ -99,40 +104,37 @@ static void reaper()
             task_table[i].state = TASK_STATE_FREE;
             task_table[i].stack_base = 0;
             task_table[i].esp = 0;
-            //kprintf("\n[Task %d reaped]\n", i);
         }
     }
 } 
 
-/* The main scheduler function, called by the timer IRQ. */
+/* Round Robin scheduler function called by the timer IRQ. */
 uint32_t schedule(uint32_t current_esp)
 {
-    if(!tasking_enabled) 
-    {
-        return current_esp;
-    }
+    // The PIT gets enabled before Tasking.
+    if(!tasking_enabled) { return(current_esp); }
 
-    // Save the current task's stack (if it's not a zombie)
+    // Let's reap any task that was killed and marked as zombie by task_kill().
     reaper();
-    if(task_table[current_task_index].state == TASK_STATE_RUNNING)
+
+    // Save the current task's stack.
+    if(task_table[current_task].state == TASK_STATE_RUNNING)
     {
-        task_table[current_task_index].esp = current_esp;
+        task_table[current_task].esp = current_esp;
     }
 
-    // Find the next task in the list that is ready to run.
-    // It assumes the task that just got interrupted (current_task_index) is done for now, 
-    //  and it needs to find the next available one.
-    // It must be able to "skip" any tasks that are TASK_STATE_FREE or TASK_STATE_ZOMBIE.
-    uint32_t next_task_index = current_task_index;
+    // Round Robin.
+    uint32_t next_task_index = current_task;
     do {
         next_task_index = (next_task_index + 1) % MAX_TASKS;
-    } while(task_table[next_task_index].state != TASK_STATE_RUNNING);
+    } 
+    while(task_table[next_task_index].state != TASK_STATE_RUNNING);
 
     // Update the current task index
-    current_task_index = next_task_index;
+    current_task = next_task_index;
 
     // Return the new task's stack pointer
-    return(task_table[current_task_index].esp);
+    return(task_table[current_task].esp);
 }
 
 /*
@@ -141,24 +143,22 @@ uint32_t schedule(uint32_t current_esp)
  */
 void task_kill()
 {
-    // Tried to kill main. Something must be wrong.
-    if(current_task_index==0) 
-    {
-        kprintf("\nMain Process somehow died.\n");
-        SYSTEM_HALT();
-    }
-
-    kprintf("\nKilling task[%d]\n", current_task_index);
-
     // Mark ourselves as a zombie, ready for reaping.
     asm volatile("cli");
-    task_table[current_task_index].state = TASK_STATE_ZOMBIE;
+    task_table[current_task].state = TASK_STATE_ZOMBIE;
     asm volatile("sti");
 
     // We can't return, and we can't free our own stack.
-    // So, we just spin here until the scheduler, running as
-    // Task A, frees our memory on the next tick.
-    while(1) {
-        asm volatile("hlt");
+    // So, we just spin here until the reaper frees our memory on the next tick.
+    while(1) { asm volatile("hlt"); }
+}
+
+/* ... */
+void task_list()
+{
+    for(int i=0; i<MAX_TASKS; i++)
+    {
+        if(task_table[i].state != TASK_STATE_RUNNING) { continue; }
+        kprintf("%d 0x%x 0x%x %s\n", i, task_table[i].esp, task_table[i].stack_base, task_table[i].name);
     }
 }

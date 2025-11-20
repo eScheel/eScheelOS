@@ -89,12 +89,15 @@ struct task {
     char name[24];          // ...
     uint32_t esp;           // Stack pointer for this task
     uint32_t stack_base;    // The original pointer from malloc, for freeing later
-    int32_t  state;         // 0 = inactive/free, 1 = active/running
+    uint8_t  state;         // 0 = inactive/free, 1 = active/running
 }__attribute__((packed));
 
-int task_exec(void(*task_function)(void));
-uint32_t schedule(uint32_t current_esp);
-void task_kill();
+extern volatile uint8_t tasking_enabled;
+
+extern int task_exec(void(*task_function)(void), const char* name);
+extern uint32_t schedule(uint32_t current_esp);
+extern void task_kill();
+extern void task_list();
 
 // KERNEL.ASM =========================================================
 extern void SYSTEM_HALT();
