@@ -17,9 +17,9 @@
 
 jmp short ENTRY
 
-kernel_addr_tmp equ 0x4000      ; Temporary address in low memory to hold the kernel while we parse elf.
-kernel_size equ 36864
-kernel_lba  equ 9               ; LBA for kernel.elf on disk.
+kernel_addr_tmp equ 0x4000     ; Temporary address in low memory to hold the kernel while we parse elf.
+kernel_size equ 49152          ; 96 sectors. This seems to be the max I can make the kernel with my current design.
+kernel_lba  equ 9              ; LBA for kernel.elf on disk.
 
 video_mode: db 0    ; Default video mode passed to kernel via al register.
 boot_drive: db 0    ; Boot drive passed to kernel via dl register.
