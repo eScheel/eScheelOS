@@ -3,7 +3,6 @@
 #include <pit.h>
 #include <pci.h>
 #include <ide.h>
-#include <task.h>
 #include <string.h>
 #include <convert.h>
 

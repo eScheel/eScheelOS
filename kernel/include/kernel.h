@@ -52,7 +52,6 @@ extern void mmap_display_available();
 #define KERNEL_VIRTUAL_BASE KERNEL_PHYSICAL_BASE
 
 // HEAP.C ==============================================================
-
 // Define a minimum block size. (sizeof(malloc_t) [8] + 16) = 24 bytes.
 #define MIN_BLOCK_SPLIT (sizeof(malloc_t) + 16)
 
@@ -73,8 +72,33 @@ extern void print_heap_info();
 extern void* malloc(size_t);
 extern void  free(void*);
 
+// TASK.C =============================================================
+#define MAX_TASKS   16
+#define STACK_SIZE  8192    // 4KB stack for new tasks
+
+// Define our new task states
+#define TASK_STATE_FREE     0   // Slot is free
+#define TASK_STATE_RUNNING  1   // Task is active and running
+#define TASK_STATE_ZOMBIE   2   // Task has exited and is waiting to be "reaped"
+
+// Defines the state of a task.
+// For our software switch, we only need to store the stack pointer.
+// All other registers (eax, ebx, eip, eflags, etc.) are
+// saved onto this stack by the interrupt handler.
+struct task {
+    char name[24];          // ...
+    uint32_t esp;           // Stack pointer for this task
+    uint32_t stack_base;    // The original pointer from malloc, for freeing later
+    int32_t  state;         // 0 = inactive/free, 1 = active/running
+}__attribute__((packed));
+
+int task_exec(void(*task_function)(void));
+uint32_t schedule(uint32_t current_esp);
+void task_kill();
+
 // KERNEL.ASM =========================================================
 extern void SYSTEM_HALT();
+extern uint32_t EFLAGS_VALUE();
 
 // KERNEL.C ===========================================================
 extern void kernel_main();

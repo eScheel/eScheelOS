@@ -3,7 +3,6 @@
 #include <keyboard.h>
 #include <pit.h>
 #include <ide.h>
-#include <task.h>
 #include <string.h>
 #include <convert.h>
 
@@ -22,15 +21,6 @@ void kernel_main()
     }
     kprintf("[OK]");
 
-    /*
-    uint8_t *temp = (uint8_t*)malloc(51200);
-    memset(temp, 0, 51200);
-    ide_read_sectors(0, 0, 100, temp);
-    timer_wait(1);
-    ide_write_sectors(1, 0, 100, temp);
-    free(temp);
-    */
-    
     // ...
     while(1) 
     { 

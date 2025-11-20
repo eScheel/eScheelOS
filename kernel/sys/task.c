@@ -1,5 +1,4 @@
 #include <kernel.h>
-#include <task.h>
 #include <string.h> // for memset
 #include <pit.h>    // for timer_wait
 

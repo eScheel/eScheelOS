@@ -52,6 +52,11 @@ void* malloc(size_t sz)
         return((void*)0); 
     }
 
+    // The EFLAGS register contains the "Interrupt Flag" (IF) bit (Bit 9). 
+    // If that bit is 1, interrupts are on.
+    uint32_t ints_enabled = (EFLAGS_VALUE() & 0x200);
+    asm volatile("cli");    // Disable interrupts to be safe.
+
     // Align the requested size UP to the nearest 8 bytes.
     // This ensures that the next block header will also be aligned.
     if (sz % HEAP_ALIGNMENT != 0) {
@@ -97,8 +102,8 @@ void* malloc(size_t sz)
                 alloc->reserved = 1;
                 system_heap.used += current_block_total_size;
             }
-            
-            // Return the alloacted address/block to the user.
+
+            if(ints_enabled) { asm volatile("sti"); }
             return((void*)block_iter + sizeof(malloc_t));
         }
         
@@ -111,6 +116,7 @@ void* malloc(size_t sz)
     // Out-of-Memory Check
     if((block_iter + total_needed) > system_heap.end)
     {
+        if(ints_enabled) { asm volatile("sti"); }
         return ((void*)0);
     }
 
@@ -122,6 +128,7 @@ void* malloc(size_t sz)
     system_heap.used += total_needed;
     current_block_address = block_iter + total_needed; // Bump the high-water mark
 
+    if(ints_enabled) { asm volatile("sti"); }
     return((void*)block_iter + sizeof(malloc_t));
 }
 
@@ -138,6 +145,11 @@ void free(void* b)
     {
         return; // This block is already free
     }
+
+    // The EFLAGS register contains the "Interrupt Flag" (IF) bit (Bit 9). 
+    // If that bit is 1, interrupts are on.
+    uint32_t ints_enabled = (EFLAGS_VALUE() & 0x200);
+    asm volatile("cli");    // Disable interrupts to be safe.
 
     // Mark as free and update heap usage
     alloc->reserved = 0;
@@ -192,5 +204,6 @@ void free(void* b)
         current_block_address = (uint32_t)alloc;
     }
 
+    if(ints_enabled) { asm volatile("sti"); }
     return;
 }

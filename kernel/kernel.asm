@@ -25,6 +25,7 @@ extern serial_init
 extern tasking_init
 extern kernel_main
 global SYSTEM_HALT
+global EFLAGS_VALUE
 
 ;=============================================================================================
 
@@ -142,7 +143,6 @@ KERNEL_INIT:
     add  esp, 8
 
     ; Initialize multi-tasking.
-    cli ; kernel_main will enable interrupts again.
     push dword str_task_init
     call vga_prints
     call tasking_init
@@ -163,6 +163,14 @@ SYSTEM_HALT:
 .LOOP:    
     hlt
     jmp  .LOOP      ; Just incase a nmi hits.
+
+;=============================================================================================
+
+; Returns the value of eflags register.
+EFLAGS_VALUE:
+    pushf           ; Push EFLAGS register onto the stack
+    pop eax         ; Pop it into EAX to return it
+    ret
 
 ;=============================================================================================
 section .rodata
