@@ -18,3 +18,4 @@ If I ever decide to do all that.
 Built on FreeBSD with the i386-gcc14 pkg.
 Tested on Virtualbox and an eMachine T5048.
 
+<img width="730" height="478" alt="escheelos" src="https://github.com/user-attachments/assets/188e27e4-0213-4a79-9072-026c7d165a1b" />
