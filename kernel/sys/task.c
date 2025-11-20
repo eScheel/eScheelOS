@@ -13,7 +13,7 @@ volatile uint8_t tasking_enabled;
 /* Initializes the multi-tasking system. */
 void tasking_init()
 {
-    // Clear the task table
+    // Clear the task table with all 0's.
     memset(task_table, 0, sizeof(struct task)*MAX_TASKS);
 
     // Initialize Task 0.
@@ -104,15 +104,17 @@ static void reaper()
             task_table[i].state = TASK_STATE_FREE;
             task_table[i].stack_base = 0;
             task_table[i].esp = 0;
+            memset(task_table[i].name, 0, 24);
         }
     }
 } 
 
-/* Round Robin scheduler function called by the timer IRQ. */
+/* Round Robin scheduler function called by the timer IRQ handler. */
 uint32_t schedule(uint32_t current_esp)
 {
     // The PIT gets enabled before Tasking.
     if(!tasking_enabled) { return(current_esp); }
+    asm volatile("cli");
 
     // Let's reap any task that was killed and marked as zombie by task_kill().
     reaper();
@@ -134,6 +136,7 @@ uint32_t schedule(uint32_t current_esp)
     current_task = next_task_index;
 
     // Return the new task's stack pointer
+    asm volatile("sti");
     return(task_table[current_task].esp);
 }
 
@@ -153,7 +156,7 @@ void task_kill()
     while(1) { asm volatile("hlt"); }
 }
 
-/* ... */
+/* Displays a list of currently running tasks. */
 void task_list()
 {
     for(int i=0; i<MAX_TASKS; i++)

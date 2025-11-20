@@ -12,8 +12,6 @@ extern void kshell();
 void kernel_main()
 {
     kprintf("Initialization complete! Main task started.\n");
-
-    // Invoke the shell to begin with for now.
     kprintf("Attempting to start the kernel shell task ... ");
     if(task_exec(kshell, "kshell") != 0)
     {
@@ -24,7 +22,7 @@ void kernel_main()
     // ...
     while(1) 
     { 
-
+        // ...
         asm volatile("hlt"); 
     }
 }

@@ -23,7 +23,7 @@ void kshell()
         kgets(s);
 
         // If command is not empty, process it.
-        if(*s)  {
+        if(*s) {
             if(strncmp(s, "help", strlen(s))==0)
             {
                 kprintf("\nPossible Commands:");

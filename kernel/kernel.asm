@@ -151,7 +151,7 @@ KERNEL_INIT:
     call tasking_init
     push dword str_okay
     call vga_prints
-    add esp, 8
+    add  esp, 8
 
     ; This will be TASK[0]. Our main task.
     call kernel_main
