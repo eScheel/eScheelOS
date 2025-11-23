@@ -146,7 +146,7 @@ void free(void* b)
         return; // This block is already free
     }
 
-    // The EFLAGS register contains the "Interrupt Flag" (IF) bit (Bit 9). 
+    // The EFLAGS register contains the Interrupt Flag (IF) bit (Bit 9). 
     // If that bit is 1, interrupts are on.
     uint32_t ints_enabled = (EFLAGS_VALUE() & 0x200);
     asm volatile("cli");    // Disable interrupts to be safe.
@@ -183,7 +183,7 @@ void free(void* b)
         block_iter += prev_alloc->size + sizeof(malloc_t);
     }
     
-    // 'prev_alloc' now points to the block right before 'alloc'
+    // prev_alloc now points to the block right before alloc
     if(prev_alloc != NULL && prev_alloc->reserved == 0)
     {
         // The previous block is free, so merge the current block into it
