@@ -5,7 +5,7 @@
 ;   Author: Jacob Scheel
 ;
 ;   This code will do the following:
-;       1) Clear the direction flag, force set CS to zero, setup segments and a stack.
+;       1) Clear the direction flag and setup segments and a stack.
 ;       2) Store boot drive number passed by BIOS. Reset the drive and Load and execute the stage2.bin.
 ;
 ;   This file also contains partition header and Filesystem information.
@@ -13,16 +13,42 @@
 [org 0x7c00]
 [bits 16]
 
-jmp 0:ENTRY     ; Force set CS to zero.
-
-stage2_addr equ 0x1000
-stage2_size equ 4096
-stage2_sect equ 2           ; Sector Offset.
-
-boot_drive: db  0
-
-msg_disk_reset_failed: db 'error: Failed resetting drive.',0
-msg_stage2_failed:     db 'error: Failed loading stage2.',0
+jmp short ENTRY
+nop
+;
+;newfs_msdos -F 32 -S 512 -m 0xf8 -u 63 -o 0 -h 16 -c 64 -s 4949278 /home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd
+;
+; FAT32 BIOS Parameter Block (BPB)
+;
+OEMName         db 'MSWIN4.1'   ; 8 Bytes
+BytesPerSec     dw 512
+SecPerClust     db 64
+ReservedSecCnt  dw 32
+NumFATs         db 2
+RootEntryCnt    dw 0            ; 0 for FAT32
+TotalSec16      dw 0            ; 0 for FAT32
+Media           db 0xF8
+FATSz16         dw 0            ; 0 for FAT32
+SecPerTrk       dw 63
+NumHeads        dw 16
+HiddenSec       dd 0
+TotalSec32      dd 4949278
+;
+; FAT32 Extended BPB
+;
+FATSz32         dd 605
+ExtFlags        dw 0
+FSVer           dw 0
+RootClus        dd 2
+FSInfo          dw 1
+BkBootSec       dw 6
+Reserved        times 12 db 0
+DriveNum        db 0x80
+Reserved1       db 0
+BootSig         db 0x29
+VolID           dd 0x7A711AFA
+VolLab          db 'ESCHEEL OS ' ; 11 Bytes
+FilSysType      db 'FAT32   '    ; 8 Bytes
 
 ;=============================================================================================
 
@@ -36,11 +62,11 @@ ENTRY:
     mov ax, 0x7c00              ;
     mov sp, ax                  ; sp = 0x7c00 just below boot code.
     sti                         ; Enable Interrupts.
-    mov [boot_drive], dl        ; BIOS Stores boot drive number in dl. Save it.
+    mov [DriveNum], dl
     xor cx, cx                  ; Initialze counter for retry logic with disk reset.
 .LOOP:
     mov  ah, 0x00	            ; Disk reset function.
-    mov  dl, [boot_drive]
+    mov  dl, [DriveNum]
     int  0x13
     jnc .STAGE2
 .FAILED:
@@ -49,19 +75,31 @@ ENTRY:
     jle .LOOP
     jmp  DISK_RESET_FAILED
 .STAGE2:
-    xor bx, bx         
-    mov es, bx                  ; Indirectly set ES to zero for ES:BX.
-    mov bx, stage2_addr         ; Set BX to start of stage2 for ES:BX.
-    mov al, stage2_size/512     ; Number of sectors to read.
-    mov cl, stage2_sect         ; Sector index to read.
-    mov ch, 0                   ; Cylinder index to read.
-    mov dh, 0                   ; Head index to read.
-    mov dl, [boot_drive]
-    mov ah, 0x02                ; AH = 0x02 (BIOS function "Read").
-    int 0x13
-    jc  STAGE2_FAILED
-    mov dl, [boot_drive]        ; Doing this again to be safe.
-    jmp 0:stage2_addr           ; Leave to stage2.
+    call DISK_READ
+    jmp  0:stage2_addr           ; Leave to stage2.
+
+;=============================================================================================
+
+; Disk Address Packet for int 0x13, ah=0x42
+DAP:
+    db 0x10             ; Size of this packet (16 bytes)
+    db 0                ; Reserved, always 0
+.SECTORS:
+    dw 0                ; Number of sectors to read. Will be filled in LOAD_KERNEL
+.BUFFER:
+    dd stage2_addr      ; 32-bit flat address.
+.LBA_START:
+    dq stage2_lba       ; 64-bit starting LBA
+
+DISK_READ:
+    mov ax, stage2_size / 512
+    mov [DAP.SECTORS], ax
+    mov ah, 0x42                ; AH = The "Extended Read" function
+    mov dl, [DriveNum]          ; DL = Drive number
+    mov si, DAP                 ; DS:SI -> Pointer to our DAP structure
+    int 0x13                    ; Call the BIOS interrupt
+    jc STAGE2_FAILED            ; Check for errors (carry flag is set on failure)
+    ret
 
 ;=============================================================================================
 
@@ -109,26 +147,13 @@ ERROR:
     jmp .LOOP   ; Incase a NMI fires.
 
 ;=============================================================================================
-; MBR Partition Table
-; We must pad our code from its end ($) up to the partition table offset (446 decimal, or 0x1BE).
-times 446-($-$$) db 0
-; Dummy Partition Table (64 bytes total)
-; Partition 1 (16 bytes): Our "bootable" partition
-db 0x80                 ; 0x1BE: Bootable Flag (0x80 = Active)
-db 0x00                 ; 0x1BF: Starting Head (CHS)
-db 0x01                 ; 0x1C0: Starting Sector (CHS)
-db 0x00                 ; 0x1C1: Starting Cylinder (CHS)
-db 0x01                 ; 0x1C2: Partition Type (0x0C = "FAT32 LBA", but any non-zero is fine)
-db 0x00                 ; 0x1C3: Ending Head (CHS)
-db 0x00                 ; 0x1C4: Ending Sector (CHS)
-db 0x00                 ; 0x1C5: Ending Cylinder (CHS)
-dd 1                    ; 0x1C6: LBA Start of Partition (stage2.bin is at sector 1)
-dd 100000               ; 0x1CA: Partition Size in Sectors (100,000 sectors, ~50MB, just a dummy value)
-; Partition 2 (16 bytes)
-times 16 db 0
-; Partition 3 (16 bytes)
-times 16 db 0
-; Partition 4 (16 bytes)
-times 16 db 0
-;
+
+stage2_addr equ 0x1000
+stage2_size equ 4096
+stage2_lba  equ 8           ; Sector Offset.
+
+msg_disk_reset_failed: db 'error: Failed resetting drive.',0
+msg_stage2_failed:     db 'error: Failed loading stage2.',0
+
+times 510-($-$$) db 0
 dw 0xAA55   ; BIOS MAGIC

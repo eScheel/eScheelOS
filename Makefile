@@ -7,7 +7,7 @@ boot:
 	nasm boot/stage2.asm -f bin -o stage2.bin
 	
 	dd if=boot.bin   of=/home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd bs=512 conv=notrunc
-	dd if=stage2.bin of=/home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd bs=512 conv=notrunc seek=1
+	dd if=stage2.bin of=/home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd bs=512 conv=notrunc seek=8
 
 kernel:
 	nasm kernel/kernel.asm    -f elf32 -o kernel.o
@@ -37,7 +37,8 @@ kernel:
 
 	i386-unknown-freebsd14.3-ld *.o -T link.ld -o kernel.elf
 
-	dd if=kernel.elf of=/home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd bs=512 conv=notrunc seek=9
+#	dd if=kernel.elf of=/home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd bs=512 conv=notrunc seek=9
+	mcopy -i /home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd kernel.elf ::/kernel.elf
 
 clean-boot:
 	rm -rv boot.bin stage2.bin 

@@ -6,3 +6,16 @@ LOWER:
 UPPER:
     0x100000 - 0x1FFFFF : kernel .text .rodata .data .bss(stack)
     0x200000 - 0x2FFFFF : Heap
+
+
+boot.bin:
+code:  0x7c00 - 0x7e00
+stack: 0x7c00
+
+stage2.bin:
+code:  0x1000 - 0x2000
+stack: 0x3000
+kload: 0x4000:0x0000: 0x40000
+
+buffer for reading directory entries and FAT tables
+0x8000:0x0000: 0x80000

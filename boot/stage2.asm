@@ -10,16 +10,11 @@
 ;       3) Load kernel code from lba 9 at address 4000h and bootstrap to 32bits.
 ;       4) Parse and relocate elf executable to 100000h and pass some info before jumping to kernel.elf
 ;
-;   TODO: Write a file system driver to load a kernel from a data region as opposed to flat sectors.
 ;
 [org 0x1000]
 [bits 16]
 
 jmp short ENTRY
-
-kernel_addr_tmp equ 0x4000     ; Temporary address in low memory to hold the kernel while we parse elf.
-kernel_size equ 49152          ; 96 sectors. This seems to be the max I can make the kernel with my current design.
-kernel_lba  equ 9              ; LBA for kernel.elf on disk.
 
 video_mode: db 0    ; Default video mode passed to kernel via al register.
 boot_drive: db 0    ; Boot drive passed to kernel via dl register.
@@ -47,7 +42,15 @@ ENTRY:
     call BIOS_VIDEO_MODE      ; Set video mode.
     call BIOS_MEMORY_MAP      ; Retrieve memory map from BIOS.
     jc   MEMORY_MAP_FAILED    ; If carry is set, the function failed.
-    call LOAD_KERNEL
+
+    call FAT32_INIT
+    ; Find the Kernel in the Root Directory
+    mov  eax, [root_cluster]
+    call FAT32_FIND_FILE
+    cmp  ax, 0              ; If AX=0, file not found
+    je   KERNEL_LOAD_FAILED
+    call FAT32_LOAD_FILE
+
 .BOOTSTRAP:
     cli
     lgdt[GDT_DESC]      ; Load the GDTR register with the base address of the GDT.
@@ -64,26 +67,236 @@ ENTRY:
 
 ;=============================================================================================
 
-; Disk Address Packet for int 0x13, ah=0x42
-DAP:
-    db 0x10             ; Size of this packet (16 bytes)
-    db 0                ; Reserved, always 0
-.SECTORS:
-    dw 0                ; Number of sectors to read. Will be filled in LOAD_KERNEL
-.BUFFER:
-    dd kernel_addr_tmp  ; 32-bit flat address (segment:offset) where ES:BX will be 0x0000:0x4000
-.LBA_START:
-    dq kernel_lba       ; 64-bit starting LBA
+; FAT32 Driver Variables & Constants
+kernel_addr_tmp equ 0x4000          ; Temporary segment in low memory to hold the kernel while we parse elf.
+kernel_filename db "KERNEL  ELF"    ; 8.3 Filename format (11 bytes, space padded)
+bpb_addr equ    0x7c00              ; Boot sector is still at 0x7c00
 
-LOAD_KERNEL:
-    mov ax, kernel_size / 512
-    mov [DAP.SECTORS], ax
-    mov ah, 0x42                ; AH = The "Extended Read" function
-    mov dl, [boot_drive]        ; DL = Drive number
-    mov si, DAP                 ; DS:SI -> Pointer to our DAP structure
-    int 0x13                    ; Call the BIOS interrupt
-    jc KERNEL_LOAD_FAILED       ; Check for errors (carry flag is set on failure)
+; Variables we will calculate from the BPB
+data_start_lba      dd 0
+sectors_per_cluster dd 0            ; Storing as 32-bit for easier math
+fat_start_lba       dd 0
+root_cluster        dd 0
+
+;=============================================================================================
+
+FAT32_INIT:
+    ; Load Sectors Per Cluster.
+    xor  eax, eax
+    mov  al, byte [bpb_addr + 0x0d]
+    mov [sectors_per_cluster], eax
+
+    ; Load Root Cluster.
+    mov  eax, [bpb_addr + 0x2c]
+    mov [root_cluster], eax
+
+    ; Calculate FAT Start LBA = HiddenSec + ReservedSec
+    mov   eax, [bpb_addr + 0x1c]      ; Hidden Sectors
+    movzx ebx, word [bpb_addr + 0x0e] ; Reserved Sectors
+    add   eax, ebx
+    mov [fat_start_lba], eax
+
+    ; Calculate Data Start LBA = FAT_Start + (NumFATs * FATSz32)
+    movzx ebx, byte [bpb_addr + 0x10]   ; Num FATs
+    mov   ecx, [bpb_addr + 0x24]        ; Sectors Per FAT (32-bit)
+    imul  ebx, ecx                      ; EBX = Total FAT Sectors
+    add   eax, ebx                      ; EAX = Data Start LBA
+    mov [data_start_lba], eax
+
     ret
+
+;=============================================================================================
+
+;
+; FAT32_FIND_FILE
+; Input: EAX = Starting Cluster of Directory (usually Root)
+; Output: AX:DX = Start Cluster of File (0 if not found), ECX = File Size
+;
+FAT32_FIND_FILE:
+    push es     ; push es to the stack to preserve its value, as it will be used for memory addressing during the operation.
+    
+.READ_DIR_CLUSTER:
+    call CLUSTER_TO_LBA     ; Convert EAX (Cluster) to LBA, the actual sector number on the disk.
+    
+    ; Read 1 cluster to buffer (using 0x8000 as scratch space)
+    mov bx, 0x8000
+    mov es, bx
+    xor bx, bx
+    mov cx, [sectors_per_cluster]
+    call DISK_READ
+
+    ; Search the entire loaded cluster.
+    mov di, 0       ; Sets DI to 0, pointing to the start of the loaded buffer.
+
+    ; Calculate total entries in the cluster:
+    ; Entries = Sectors_Per_Cluster * 16 (entries per sector)
+    mov ax, [sectors_per_cluster] ; Load sector count (e.g. 64)
+    shl ax, 4                     ; Multiply by 16 (Shift Left 4 times)
+    mov cx, ax                    ; Set loop counter (e.g., 64 * 16 = 1024)
+
+.SEARCH_LOOP:
+    ; Push di and cx to the stack because the string comparison instruction will modify them.
+    push di
+    push cx
+    mov  si, kernel_filename     ; DS:SI = Filename
+    mov  cx, 11                  ; Length of "KERNEL  ELF"
+
+    ; Compares bytes at ES:DI (directory entry name) and DS:SI (your target filename) one by one. 
+    ; It repeats as long as they are equal (repe) and CX > 0.
+    repe cmpsb                   ; Compare ES:DI with DS:SI
+    pop  cx
+    pop  di
+    je .FOUND
+
+    add   di, 32        ; Move to next directory entry.
+    loop .SEARCH_LOOP   ; Decrements CX and jumps back to the start of the loop if CX is not zero.
+
+    ; TODO: If not found in this cluster, we should follow the FAT chain.
+    ; For "Learning" purposes, we assume Root Dir fits in 1 cluster.
+    jmp .NOT_FOUND
+
+.FOUND:
+    mov dx,  [es:di + 0x14] ; Extract High Cluster
+    mov ax,  [es:di + 0x1a] ; Extract Low Cluster
+    ;mov ecx, [es:di + 0x1c] ; Extract File Size
+    pop es
+    ret
+
+.NOT_FOUND:
+    pop es
+    xor ax, ax  ; Clear ax to indicate failure.
+    ret
+
+;=============================================================================================
+
+;
+; FAT32_LOAD_FILE
+; Input: AX:DX = Start Cluster
+;        kernel_buffer (0x4000) = Destination
+;
+FAT32_LOAD_FILE:
+    ; Reconstruct Cluster ID into EAX
+    push dx     ; puts the high 16 bits on the stack.
+    push ax     ; puts the low 16 bits "below" it in memory.
+    pop eax     ; reads 32 bits from the stack at once.
+    ; EAX now holds the 32-bit Cluster ID. 
+    
+    ; Setup Destination Segment 0x40000
+    mov bx, kernel_addr_tmp ; 0x4000
+    mov es, bx
+    xor bx, bx
+
+.LOAD_LOOP:
+    push eax    ; Save current cluster
+
+    ; Uses the cluster number in EAX to calculate the actual sector number on the disk (LBA) where this data lives.
+    call CLUSTER_TO_LBA
+    mov  cx, [sectors_per_cluster]  ; Tells the disk reader how many sectors to read at once
+    call DISK_READ
+
+    ; Advance Buffer Pointer
+    ; BX += (SecPerClust * 512). Watch for segment overflow!
+    ; Since we are in Real Mode, we must manipulate ES manually if we cross 64KB.
+    ; (Ideally, add logic: if BX overflows, add 0x1000 to ES)
+    mov ax, [sectors_per_cluster]
+    mov cx, 512     ; Load the multiplier, bytes_per_sector.
+    mul cx          ; Multiplies Sectors (64) * 512 to get the total bytes loaded (32,768)
+    add bx, ax      ; Adds that number to BX.
+    
+    ; Get Next Cluster from FAT
+    pop  eax                ; Restore current cluster
+    call GET_NEXT_CLUSTER   ; Returns next cluster in EAX.
+    cmp  eax, 0x0FFFFFF8    ; Check for End of Chain.
+    jae .DONE               ; Jump if Above or Equal.
+    jmp .LOAD_LOOP
+
+.DONE:
+    ret
+
+;=============================================================================================
+
+;
+; CLUSTER_TO_LBA
+; Input: EAX = Cluster Number
+; Output: EAX = LBA
+; Formula: Data_Start + ((Cluster - 2) * Sectors_Per_Cluster)
+;
+CLUSTER_TO_LBA:
+    sub eax, 2                          ; FAT32 cluster numbers start at 2. Subtract from cluster number.
+    mov ecx, [sectors_per_cluster]      ; We need to know how big each cluster is to know how far to jump.
+    mul ecx                             ; Calculate the offset in sectors from the beginning of the data area.
+    add eax, [data_start_lba]           ; We need to add the absolute starting position of the data area.
+    ret
+
+;=============================================================================================
+
+;
+; GET_NEXT_CLUSTER
+; Input: EAX = Current Cluster
+; Output: EAX = Next Cluster
+;
+GET_NEXT_CLUSTER:
+    push es
+    push bx
+    push dx
+
+    ; The File Allocation Table is just a giant array of 32-bit integers.
+    shl eax, 2  ; FAT Offset = Cluster * 4
+
+    ; Sector Offset = FAT Offset / 512
+    xor edx, edx
+    mov ebx, 512
+    div ebx               ; EAX = Sector Offset, EDX = Byte Offset within sector
+
+    ; FAT Sector LBA = FAT_Start_LBA + Sector Offset
+    add eax, [fat_start_lba]
+
+    ; Reads that single 512-byte chunk of the FAT table into memory at 0x8000.
+    push dx               ; Save Byte Offset
+    mov  bx, 0x8000
+    mov  es, bx
+    xor  bx, bx
+    mov  cx, 1             ; Read 1 sector.
+    call DISK_READ
+    pop  di                ; Restore Byte Offset into DI
+
+    ; Read the next cluster value
+    mov eax, [es:di]      ; Read 32-bits from the FAT entry. ES points to 0x8000. DI holds the remainder offset.
+    and eax, 0x0FFFFFFF   ; Mask out high 4 bits (FAT32 specific)
+
+    pop dx
+    pop bx
+    pop es
+    ret
+
+;=============================================================================================
+
+;
+; DISK_READ (Standard Int 13h Extensions)
+; Input: EAX = LBA, CX = Count, ES:BX = Buffer
+;
+DISK_READ:
+    pushad
+    mov [dap_lba],   eax
+    mov [dap_count], cx
+    mov [dap_seg],   es
+    mov [dap_off],   bx
+    mov ah, 0x42
+    mov dl, [boot_drive]
+    mov si, dap
+    int 0x13
+    jc KERNEL_LOAD_FAILED
+    popad
+    ret
+
+; Disk Address Packet (DAP)
+dap:
+    db 0x10
+    db 0
+dap_count: dw 0
+dap_off:   dw 0
+dap_seg:   dw 0
+dap_lba:   dq 0
 
 ;=============================================================================================
 
@@ -336,7 +549,7 @@ PARSE_ELF_AND_RELOCATE:
 
     ; This will be used to parse the headers.
     xor esi, esi
-    mov esi, kernel_addr_tmp ; 4000h is where the LOAD_KERNEL routine loaded the kernel.
+    mov esi, 0x40000 ; 4000h is where the LOAD_KERNEL routine loaded the kernel.
 
     ; Check the magic to see if valid elf file.
     mov al, byte [esi]
@@ -387,7 +600,7 @@ PHDR_LOOP:
 
     ; Set source(ebx) to where BIOS loaded the kernel into lower memory.
     ; Then add the offset to ebx to get the start of the section.
-    mov ebx, kernel_addr_tmp
+    mov ebx, 0x40000
     add ebx, [section_offset]
 
     ; Set destination(edi) to the physical address where we need to move the kernel.
