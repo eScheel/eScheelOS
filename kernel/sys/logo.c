@@ -9,27 +9,27 @@ void draw_logo()
     uint8_t line3[27] = { 255,255,' ',' ',' ',' ',' ',' ',' ',' ',255,255,' ',' ',255,255,' ',' ',255,255,' ',' ',' ',' ',' ',255,255 };
     uint8_t line4[27] = { 255,255,255,255,255,' ',' ',255,255,255,255,255,' ',' ',' ',255,255,255,255,' ',' ',' ',255,255,255,255,255 };
 
-    for(int x=40,y=3,i=0; x<67; x++,i++)
+    for(int x=40,y=4,i=0; x<67; x++,i++)
     {
         vga_putc(line0[i], x, y);
     }
 
-    for(int x=40,y=4,i=0; x<67; x++,i++)
+    for(int x=40,y=5,i=0; x<67; x++,i++)
     {
         vga_putc(line1[i], x, y);
     }
 
-    for(int x=40,y=5,i=0; x<67; x++,i++)
+    for(int x=40,y=6,i=0; x<67; x++,i++)
     {
         vga_putc(line2[i], x, y);
     }
 
-    for(int x=40,y=6,i=0; x<67; x++,i++)
+    for(int x=40,y=7,i=0; x<67; x++,i++)
     {
         vga_putc(line3[i], x, y);
     }
 
-    for(int x=40,y=7,i=0; x<67; x++,i++)
+    for(int x=40,y=8,i=0; x<67; x++,i++)
     {
         vga_putc(line4[i], x, y);
     }

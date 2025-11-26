@@ -37,4 +37,21 @@ struct fat32_bpb {
     char     fat_type_label[8];
 }__attribute__((packed));
 
+struct fat32_directory_entry {
+    char name[11];              // 8.3 Filename
+    uint8_t attr;               // Attributes (Read-only, hidden, etc.)
+    uint8_t ntres;              // Reserved for Windows NT
+    uint8_t creation_tenths;    // Tenth-second creation time
+    uint16_t creation_time;     // Creation time
+    uint16_t creation_date;     // Creation date
+    uint16_t last_access;       // Last access date
+    uint16_t first_cluster_high;// High 16 bits of cluster number
+    uint16_t last_write_time;   // Last modification time
+    uint16_t last_write_date;   // Last modification date
+    uint16_t first_cluster_low; // Low 16 bits of cluster number
+    uint32_t size;              // File size in bytes
+} __attribute__((packed));
+
+extern void fat32_ls();
+
 #endif  // __FAT32_H

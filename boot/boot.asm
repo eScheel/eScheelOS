@@ -21,7 +21,7 @@ nop
 ;
 ; FAT32 BIOS Parameter Block (BPB)
 ;
-OEMName         db 'MSWIN4.1'   ; 8 Bytes
+OEMName         db 'BSD4.4  '   ; 8 Bytes
 BytesPerSec     dw 512
 SecPerClust     db 64
 ReservedSecCnt  dw 32

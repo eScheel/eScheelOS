@@ -13,6 +13,8 @@ static uint16_t ide_control_port  = 0x3F6; // Primary Bus
 // Since our ide driver is hard-coded to the Primary IDE channel's ports (0x1F0, 0x3F6), 
 // we only need to worry about 128 (Master) and 129 (Slave).
 struct ata_identify ata_ident[2];
+
+// ...
 static uint8_t drives[2];
 
 /* Waits ~400ns by reading the alternate status port 4 times. */
