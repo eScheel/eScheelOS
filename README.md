@@ -8,8 +8,15 @@ Really just a reason to learn and write in assembly.
 I'm not very good at this, and probably made some horrible design choices.
 But it's fun!
 
-BIOS boot only.
-FAT32 Capable. (Kind of)
+BIOS boot only. We've rolled our own. This was the funnest part.
+
+Identity mapped paging with no page allocators implemented.
+Has a heap allocater though.
+
+Expects a legacy IDE controller to be found. ATA-1 
+FAT32 Capable. (Kind of) This is where I called it quits.
+
+Round Robin based multi-tasking!
 
 -----------------------------------------------------------------------------------
 
