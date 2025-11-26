@@ -42,15 +42,12 @@ ENTRY:
     call BIOS_VIDEO_MODE      ; Set video mode.
     call BIOS_MEMORY_MAP      ; Retrieve memory map from BIOS.
     jc   MEMORY_MAP_FAILED    ; If carry is set, the function failed.
-
     call FAT32_INIT
-    ; Find the Kernel in the Root Directory
-    mov  eax, [root_cluster]
+    mov  eax, [root_cluster]  ; Find the Kernel in the Root Directory
     call FAT32_FIND_FILE
     cmp  ax, 0              ; If AX=0, file not found
     je   KERNEL_LOAD_FAILED
     call FAT32_LOAD_FILE
-
 .BOOTSTRAP:
     cli
     lgdt[GDT_DESC]      ; Load the GDTR register with the base address of the GDT.
@@ -70,7 +67,7 @@ ENTRY:
 ; FAT32 Driver Variables & Constants
 kernel_addr_tmp equ 0x4000          ; Temporary segment in low memory to hold the kernel while we parse elf.
 kernel_filename db "KERNEL  ELF"    ; 8.3 Filename format (11 bytes, space padded)
-bpb_addr equ    0x7c00              ; Boot sector is still at 0x7c00
+bpb_addr        equ 0x7c00          ; Boot sector is still at 0x7c00
 
 ; Variables we will calculate from the BPB
 data_start_lba      dd 0

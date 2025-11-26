@@ -17,6 +17,7 @@ jmp short ENTRY
 nop
 ;
 ;newfs_msdos -F 32 -S 512 -m 0xf8 -u 63 -o 0 -h 16 -c 64 -s 4949278 /home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd
+; TODO: Let the driver fill in some of these values to be more dynamic.
 ;
 ; FAT32 BIOS Parameter Block (BPB)
 ;
@@ -50,6 +51,10 @@ VolID           dd 0x7A711AFA
 VolLab          db 'ESCHEEL OS ' ; 11 Bytes
 FilSysType      db 'FAT32   '    ; 8 Bytes
 
+stage2_addr equ 0x1000
+stage2_size equ 4096
+stage2_lba  equ 8           ; Sector Offset.
+
 ;=============================================================================================
 
 ENTRY:
@@ -76,6 +81,7 @@ ENTRY:
     jmp  DISK_RESET_FAILED
 .STAGE2:
     call DISK_READ
+    mov  dl, [DriveNum]
     jmp  0:stage2_addr           ; Leave to stage2.
 
 ;=============================================================================================
@@ -131,6 +137,9 @@ BIOS_PRINTS_DONE:
 
 ;=============================================================================================
 
+msg_disk_reset_failed: db 'error: Failed resetting drive.',0
+msg_stage2_failed:     db 'error: Failed loading stage2.',0
+
 DISK_RESET_FAILED:
     lea  si, [msg_disk_reset_failed]
     call BIOS_PRINTS
@@ -147,13 +156,6 @@ ERROR:
     jmp .LOOP   ; Incase a NMI fires.
 
 ;=============================================================================================
-
-stage2_addr equ 0x1000
-stage2_size equ 4096
-stage2_lba  equ 8           ; Sector Offset.
-
-msg_disk_reset_failed: db 'error: Failed resetting drive.',0
-msg_stage2_failed:     db 'error: Failed loading stage2.',0
 
 times 510-($-$$) db 0
 dw 0xAA55   ; BIOS MAGIC
