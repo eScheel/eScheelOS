@@ -8,8 +8,6 @@
 ;       1) Clear the direction flag and setup segments and a stack.
 ;       2) Store boot drive number passed by BIOS. Reset the drive and Load and execute the stage2.bin.
 ;
-;   This file also contains partition header and Filesystem information.
-;
 [org 0x7c00]
 [bits 16]
 

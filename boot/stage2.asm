@@ -7,9 +7,8 @@
 ;   This code will do the following:
 ;       1) Setup segments and a stack, store the boot drive number passed by boot.bin
 ;       2) Check and enable A20 using two of three methods. Initialize video mode and memory map with BIOS.
-;       3) Load kernel code from lba 9 at address 4000h and bootstrap to 32bits.
-;       4) Parse and relocate elf executable to 100000h and pass some info before jumping to kernel.elf
-;
+;       3) Load kernel code from the fat32 root directory to 40000h and bootstrap to 32bits.
+;       4) Parse and relocate elf executable to 100000h and pass boot_drive before jumping to kernel.elf
 ;
 [org 0x1000]
 [bits 16]
