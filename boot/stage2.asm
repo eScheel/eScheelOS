@@ -18,9 +18,6 @@ jmp short ENTRY
 video_mode: db 0    ; Default video mode passed to kernel via al register.
 boot_drive: db 0    ; Boot drive passed to kernel via dl register.
 
-msg_mmap_fail:   db 'error: Failed to get valid memory map form BIOS.',0
-msg_kernel_fail: db 'error: Failed to load the kernel.',0
-
 ;=============================================================================================
 
 ENTRY:
@@ -296,6 +293,9 @@ dap_lba:   dq 0
 
 ;=============================================================================================
 
+msg_mmap_fail:   db 'error: Failed to get valid memory map form BIOS.',0
+msg_kernel_fail: db 'error: Failed to load the kernel.',0
+
 MEMORY_MAP_FAILED:
     lea  si, [msg_mmap_fail]
     call BIOS_PRINTS
@@ -513,8 +513,6 @@ GDT_DESC:
 
 [bits 32]
 
-msg_invalid_elf: db 'error: Failed to locate a valid elf file.',0
-
 BITS32:
     mov  ebp, 0x4000    ; Setup temporary stack for 32bit stub.
     call PARSE_ELF_AND_RELOCATE
@@ -603,7 +601,7 @@ PHDR_LOOP:
     mov edi, [physical_address]
 
     ; Write the bytes to the destination address.
-    push ecx            ; Save ecx since being used for program_header_count.
+    push ecx                 ; Save ecx since being used for program_header_count.
     xor  ecx, ecx
 .WRITE_LOOP:
     mov al, byte [ebx]
@@ -726,6 +724,8 @@ VGA_PRINTS:
     ret
 
 ;=============================================================================================
+
+msg_invalid_elf: db 'error: Failed to locate a valid elf file.',0
 
 ELF_PARSE_FAILED:
     lea  esi, [msg_invalid_elf]

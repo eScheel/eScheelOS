@@ -11,10 +11,15 @@
 [org 0x7c00]
 [bits 16]
 
+stage2_addr equ 0x1000
+stage2_size equ 4096
+stage2_lba  equ 8           ; Sector Offset.
+
 jmp short ENTRY
 nop
 ;
 ;newfs_msdos -F 32 -S 512 -m 0xf8 -u 63 -o 0 -h 16 -c 64 -s 4949278 /home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd
+;
 ; TODO: Let the driver fill in some of these values to be more dynamic.
 ;
 ; FAT32 BIOS Parameter Block (BPB)
@@ -49,10 +54,6 @@ VolID           dd 0x7A711AFA
 VolLab          db 'ESCHEEL OS ' ; 11 Bytes
 FilSysType      db 'FAT32   '    ; 8 Bytes
 
-stage2_addr equ 0x1000
-stage2_size equ 4096
-stage2_lba  equ 8           ; Sector Offset.
-
 ;=============================================================================================
 
 ENTRY:
@@ -67,7 +68,7 @@ ENTRY:
     sti                         ; Enable Interrupts.
     mov [DriveNum], dl
     xor cx, cx                  ; Initialze counter for retry logic with disk reset.
-.LOOP:
+.DISK_RESET:
     mov  ah, 0x00	            ; Disk reset function.
     mov  dl, [DriveNum]
     int  0x13
@@ -75,8 +76,8 @@ ENTRY:
 .FAILED:
     inc  cx
     cmp  cx, 2                  ; Let's give it 3 retries.
-    jle .LOOP
-    jmp  DISK_RESET_FAILED
+    jle .DISK_RESET
+    jmp  DISK_RESET_FAILED      ; Too many tries.
 .STAGE2:
     call DISK_READ
     mov  dl, [DriveNum]
@@ -156,4 +157,4 @@ ERROR:
 ;=============================================================================================
 
 times 510-($-$$) db 0
-dw 0xAA55   ; BIOS MAGIC
+dw 0xAA55
