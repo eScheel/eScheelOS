@@ -14,6 +14,8 @@
 jmp short ENTRY
 nop
 ;
+;dd if=/dev/zero of=/home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd bs=512 count=4949278 conv=notrunc status=progress
+;
 ;newfs_msdos -F 32 -S 512 -m 0xf8 -u 63 -o 0 -h 16 -c 64 -s 4949278 /home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd
 ;
 ; TODO: Let the driver fill in some of these values to be more dynamic.
