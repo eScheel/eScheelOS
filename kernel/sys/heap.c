@@ -37,11 +37,11 @@ void heap_init()
 void print_heap_info()
 {
     kprintf("offset        size      avail      used         top\n");
-    kprintf("%xh      ",   system_heap.base);
-    kprintf("%d   ",   system_heap.size);
-    kprintf("%d     ",  system_heap.size-system_heap.used);
-    kprintf("%d      ", system_heap.used);
-    kprintf("%xh\n",    system_heap.end);
+    kprintf("%xh      ",    system_heap.base);
+    kprintf("%d   ",        system_heap.size);
+    kprintf("%d     ",      system_heap.size-system_heap.used);
+    kprintf("%d      ",     system_heap.used);
+    kprintf("%xh\n",        system_heap.end);
 }
 
 /* First Fit Memory Heap Allocator. */

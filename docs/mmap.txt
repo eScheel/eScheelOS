@@ -13,3 +13,4 @@ LOWER:
 UPPER:
     0x100000 - 0x1FFFFF : kernel .text .rodata .data .bss(stack)
     0x200000 - 0x2FFFFF : Heap
+    0x300000 - 0x3FFFFF : Loaded Program / TASK

@@ -7,6 +7,7 @@ static struct fat32_bpb bpb;
 static uint32_t fat_start_lba;      // LBA = HiddenSec + ReservedSec
 static uint32_t data_start_lba;     // LBA = FAT_Start + (NumFATs * FATSz32)
 
+//========================================================================================
 /* Initializes the BPB structure. */
 void fat32_init()
 {
@@ -28,6 +29,7 @@ void fat32_init()
     free(data);
 }
 
+//========================================================================================
 /* Helper: Converts a cluster number to a sector number (LBA). */
 uint32_t cluster_to_lba(uint32_t cluster)
 {
@@ -64,7 +66,7 @@ void fat_to_filename(const char* src, char* dest)
     int i, j = 0;
     
     // Copy Name (up to 8 chars)
-    for(i = 0; i < 8; i++) 
+    for(i = 0; i<8; i++) 
     {
         if(src[i] == ' ') { break; }
         dest[j++] = src[i];
@@ -76,7 +78,7 @@ void fat_to_filename(const char* src, char* dest)
         dest[j++] = '.';
 
         // Copy Extension (up to 3 chars)
-        for(i = 8; i < 11; i++)
+        for(i = 8; i<11; i++)
         {
             if(src[i] == ' ') { break; }
             dest[j++] = src[i];
@@ -86,6 +88,7 @@ void fat_to_filename(const char* src, char* dest)
     dest[j] = '\0'; // Null terminate
 }
 
+//========================================================================================
 /* Lists the files in the Root Directory. */
 void fat32_ls()
 {
@@ -116,7 +119,6 @@ void fat32_ls()
         // Iterate through directory entries (32 bytes each)
         struct fat32_directory_entry* dir = (struct fat32_directory_entry*)buffer;
         int entries_count = cluster_size / sizeof(struct fat32_directory_entry);
-
         for(int i = 0; i<entries_count; i++)
         {
             // 0x00 = No more entries in this directory
@@ -136,9 +138,20 @@ void fat32_ls()
             if(dir[i].attr & 0x10) { kprintf("[DIR]  "); }
             else                   { kprintf("[FILE] "); }
 
-            // Print the filename and size
+            // Print the filename.
             fat_to_filename(dir[i].name, formatted_name);
-            kprintf("%s\t(%d bytes)\n", formatted_name, dir[i].size);
+            int index;
+            for(index=0; formatted_name[index]!=0; index++)
+            {
+                kprintf("%c", formatted_name[index]);
+            }
+
+            // Add some padding and print size.
+            for(;index<11;index++)
+            {
+                kprintf(" ");
+            }
+            kprintf(" (%d bytes)\n", dir[i].size);
         }
 
         // Get the next cluster in the chain
@@ -148,8 +161,9 @@ void fat32_ls()
     free(buffer);
 }
 
+//========================================================================================
 /* ... */
-void fat32_read(const char* fname)
+file_t* fat32_open(const char* fname)
 {
     struct fat32_directory_entry file_entry;
     int found = 0;
@@ -168,18 +182,18 @@ void fat32_read(const char* fname)
         {
             kprintf("Read error in directory.\n");
             free(dir_buffer);
-            return;
+            return((void* )0);
         }
 
+        // Iterate through directory entries (32 bytes each)
         struct fat32_directory_entry* dir = (struct fat32_directory_entry*)dir_buffer;
         int entries_count = cluster_size_bytes / sizeof(struct fat32_directory_entry);
-
-        for(int i = 0; i < entries_count; i++)
+        for(int i = 0; i<entries_count; i++)
         {
-            if(dir[i].name[0] == 0x00) { found = -1; break; }   // End of dir
-            if((unsigned char)dir[i].name[0] == 0xE5) continue; // Deleted
-            if(dir[i].attr == 0x0F) continue;                   // LFN
-            if(dir[i].attr & 0x10) continue;                    // Directory
+            if(dir[i].name[0] == 0x00) { found = -1; break; }       // End of dir
+            if((unsigned char)dir[i].name[0] == 0xE5) { continue; } // Deleted
+            if(dir[i].attr == 0x0F) { continue; }                   // LFN
+            if(dir[i].attr & 0x10) { continue; }                    // Directory
 
             // Convert "NAME    EXT" to "NAME.EXT"
             fat_to_filename(dir[i].name, formatted_name);
@@ -193,26 +207,27 @@ void fat32_read(const char* fname)
             }
         }
         
-        if(found == 1 || found == -1) break;
+        if(found == 1 || found == -1) { break; }
         dir_cluster = get_next_cluster(dir_cluster);
     }
     
     free(dir_buffer);
-
-    if(!found || found == -1) {
+    if(!found || found == -1) 
+    {
         kprintf("File not found: %s\n", fname);
-        return;
+        return((void* )0);
     }
 
     // READ THE FILE DATA
     // Calculate size aligned to 512 bytes to prevent buffer overflow
     uint32_t aligned_size = file_entry.size;
-    if (aligned_size % 512 != 0) 
+    if(aligned_size % 512 != 0) 
     {
         aligned_size = (aligned_size + 512) & ~(511);
     }
 
-    char* file_data = (char*)malloc(aligned_size);
+    // ...
+    char* file_data = (char* )malloc(aligned_size);
     char* data_ptr = file_data;
     uint32_t current_file_cluster = ((uint32_t)file_entry.first_cluster_high << 16) | file_entry.first_cluster_low;
     
@@ -223,32 +238,33 @@ void fat32_read(const char* fname)
         uint32_t lba = cluster_to_lba(current_file_cluster);
         
         // Read the whole cluster
-        if(ide_read_sectors(0, lba, bpb.sectors_per_cluster, data_ptr) != 0) {
+        if(ide_read_sectors(0, lba, bpb.sectors_per_cluster, data_ptr) != 0) 
+        {
             kprintf("Error reading file data.\n");
             free(file_data);
-            return;
+            return((void* )0);
         }
-
-        // Move pointer forward
-        //uint32_t bytes_to_copy = (bytes_left > cluster_size_bytes) ? cluster_size_bytes : bytes_left;
         
         // Note: ide_read_sectors writes full sectors. 
         // We advance our pointer by the full cluster size to keep alignment 
         // for the next read, or just track logic carefully.
         data_ptr += cluster_size_bytes; 
         
-        if(bytes_left < cluster_size_bytes) bytes_left = 0;
-        else bytes_left -= cluster_size_bytes;
+        // ...
+        if(bytes_left < cluster_size_bytes) { bytes_left = 0; }
+        else { bytes_left -= cluster_size_bytes; }
 
         // Get next cluster in the chain
         current_file_cluster = get_next_cluster(current_file_cluster);
     }
 
-    // PRINT OR USE DATA
-    for(unsigned int i = 0; i < file_entry.size; i++) 
-    {
-        kprintf("%c", file_data[i]);
-    }
-    
+    // ..
+    file_t* ret = (file_t *)malloc(sizeof(file_t) + file_entry.size);
+    memset(ret, 0, sizeof(file_t)+file_entry.size);
+
+    ret->size = file_entry.size;
+    memcpy(file_data, ret->base, ret->size);
+
     free(file_data);
+    return(ret);
 }

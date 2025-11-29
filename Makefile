@@ -25,6 +25,7 @@ kernel:
 	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/pci.c      -o pci.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/ide.c      -o ide.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/fat32.c    -o fat32.o    -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
+	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/elf32.c    -o elf32.o    -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/serial.c   -o serial.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/lib/string.c       -o string.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/lib/convert.c      -o convert.o  -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra

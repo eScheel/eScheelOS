@@ -4,6 +4,7 @@
 #include <pci.h>
 #include <ide.h>
 #include <fat32.h>
+#include <elf32.h>
 #include <string.h>
 #include <convert.h>
 
@@ -79,6 +80,17 @@ void kshell()
             {
                 kprintf("\n");
                 reaper();
+            }
+
+            else if(strncmp(s, "exec", strlen(s))==0)
+            {
+                file_t* fp = fat32_open("TEST");
+                uint32_t offset = elf32_parse_and_relocate(fp->base);
+                if(offset != 0xffffffff)
+                {
+                    task_exec((void* )offset, "test");
+                }
+                free(fp);
             }
 
             else if(strncmp(s, "exit", strlen(s))==0)

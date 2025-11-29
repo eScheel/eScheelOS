@@ -52,7 +52,12 @@ struct fat32_directory_entry {
     uint32_t size;              // File size in bytes
 } __attribute__((packed));
 
+typedef struct {
+    uint8_t* base;
+    uint32_t size;
+}__attribute__((packed)) file_t;
+
 extern void fat32_ls();
-void fat32_read(const char*);
+extern file_t* fat32_open(const char*);
 
 #endif  // __FAT32_H

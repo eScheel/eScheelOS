@@ -96,7 +96,7 @@ struct task {
 
 extern volatile uint8_t tasking_enabled;
 
-extern int task_exec(void(*task_function)(void), const char*);
+extern int task_exec(void(*)(void), const char*);
 extern uint32_t schedule(uint32_t);
 extern void task_kill();
 extern void task_list();

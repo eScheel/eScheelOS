@@ -14,6 +14,7 @@ void kernel_main()
 {
     kprintf("Initialization complete! Main task started.\n"); 
 
+    // ...
     kprintf("Attempting to start the kernel shell task ... ");
     if(task_exec(kshell, "kshell") != 0)
     {
@@ -22,6 +23,7 @@ void kernel_main()
     }
     kprintf("[OK]");
 
+    // ...
 kernel_idle:
     while(1)
     {
