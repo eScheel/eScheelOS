@@ -11,10 +11,6 @@
 [org 0x7c00]
 [bits 16]
 
-stage2_addr equ 0x1000
-stage2_size equ 4096
-stage2_lba  equ 8           ; Sector Offset.
-
 jmp short ENTRY
 nop
 ;
@@ -55,6 +51,10 @@ VolLab          db 'ESCHEEL OS ' ; 11 Bytes
 FilSysType      db 'FAT32   '    ; 8 Bytes
 
 ;=============================================================================================
+
+stage2_addr equ 0x1000
+stage2_size equ 4096
+stage2_lba  equ 8           ; Sector Offset.
 
 ENTRY:
     cld                         ; Ensures that string manipulation instructions (like movsb, lodsb, etc.) increment their pointers

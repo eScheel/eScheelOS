@@ -111,7 +111,7 @@ FAT32_FIND_FILE:
 .READ_DIR_CLUSTER:
     call CLUSTER_TO_LBA     ; Convert EAX (Cluster) to LBA, the actual sector number on the disk.
     
-    ; Read 1 cluster to buffer (using 0x8000 as scratch space)
+    ; Read 1 cluster to buffer using 0x8000 as scratch space.
     mov bx, 0x8000
     mov es, bx
     xor bx, bx
@@ -244,14 +244,14 @@ GET_NEXT_CLUSTER:
     ; FAT Sector LBA = FAT_Start_LBA + Sector Offset
     add eax, [fat_start_lba]
 
-    ; Reads that single 512-byte chunk of the FAT table into memory at 0x8000.
+    ; Reads that single 512-byte chunk of the FAT table into memory at segment 0x8000.
     push dx               ; Save Byte Offset
     mov  bx, 0x8000
     mov  es, bx
     xor  bx, bx
     mov  cx, 1             ; Read 1 sector.
     call DISK_READ
-    pop  di                ; Restore Byte Offset into DI
+    pop  di                ; Restore Byte Offset(DX) into DI
 
     ; Read the next cluster value
     mov eax, [es:di]      ; Read 32-bits from the FAT entry. ES points to 0x8000. DI holds the remainder offset.
