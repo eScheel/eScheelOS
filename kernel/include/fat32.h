@@ -53,5 +53,6 @@ struct fat32_directory_entry {
 } __attribute__((packed));
 
 extern void fat32_ls();
+void fat32_read(const char*);
 
 #endif  // __FAT32_H

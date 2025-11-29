@@ -205,7 +205,7 @@ int ide_read_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buf
         }
 
         // Read 256 16-bit words (512 bytes)
-        for(int i = 0; i < 256; i++)
+        for(int i = 0; i<256; i++)
         {
             read_buffer[i] = INW(ide_data_port + ATA_REG_DATA);
         }

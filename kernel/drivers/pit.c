@@ -40,12 +40,18 @@ uint32_t timer_interrupt_handler(uint32_t current_esp)
         timer_counter--;
     }
 
+    // Handle the ticks for any specific sleeping task.
+    task_tick();
+
     // Call the scheduler and return the (potentially new) stack pointer
     return(schedule(current_esp));
 }
 
-/* Wait for specified amount of time. 
- * A value of 100 is a second. */
+/* 
+ * Blocks the whole cpu.
+ * Wait for specified amount of time. 
+ * A value of 100 is a second. 
+ */
 void timer_wait(uint32_t tc)
 {
     asm volatile("cli");

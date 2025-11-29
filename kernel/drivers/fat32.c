@@ -32,7 +32,7 @@ void fat32_init()
 uint32_t cluster_to_lba(uint32_t cluster)
 {
     // Formula: Data_Start + ((Cluster - 2) * Sectors_Per_Cluster)
-    return data_start_lba + ((cluster - 2) * bpb.sectors_per_cluster);
+    return(data_start_lba + ((cluster - 2) * bpb.sectors_per_cluster));
 }
 
 /* Helper: Looks up the next cluster in the chain from the FAT. */
@@ -47,30 +47,43 @@ uint32_t get_next_cluster(uint32_t current_cluster)
     
     // Read that single FAT sector
     uint32_t* table_buffer = (uint32_t*)malloc(512);
+    
     // Assuming Drive 0 for now (Primary Master)
     ide_read_sectors(0, fat_sector, 1, table_buffer);
 
-    // Read the entry and mask out the top 4 bits (FAT32 specific)
+    // Read the entry and mask out the top 4 bits.
     uint32_t next_cluster = table_buffer[ent_offset/4] & 0x0FFFFFFF;
     
     free(table_buffer);
     return(next_cluster);
 }
 
-/* Formats the weird "8.3" filenames (e.g., "KERNEL  ELF") to "KERNEL.ELF" */
-void print_formatted_name(char* name)
+/* Helper to convert FAT 8.3 name "NAME    EXT" to "name.ext" for comparison */
+void fat_to_filename(const char* src, char* dest)
 {
-    for(int i = 0; i < 8; i++)
+    int i, j = 0;
+    
+    // Copy Name (up to 8 chars)
+    for(i = 0; i < 8; i++) 
     {
-        if(name[i] != ' ') kprintf("%c", name[i]);
+        if(src[i] == ' ') { break; }
+        dest[j++] = src[i];
     }
-    if(name[8] != ' ') 
+    
+    // Add dot if extension exists
+    if(src[8] != ' ') 
     {
-        kprintf(".");
-        for(int i = 8; i < 11; i++) {
-            if(name[i] != ' ') kprintf("%c", name[i]);
+        dest[j++] = '.';
+
+        // Copy Extension (up to 3 chars)
+        for(i = 8; i < 11; i++)
+        {
+            if(src[i] == ' ') { break; }
+            dest[j++] = src[i];
         }
     }
+
+    dest[j] = '\0'; // Null terminate
 }
 
 /* Lists the files in the Root Directory. */
@@ -84,7 +97,10 @@ void fat32_ls()
     // Allocate a buffer to hold one entire cluster of directory entries
     uint8_t* buffer = (uint8_t*)malloc(cluster_size);
 
-    kprintf("\nListing Root Directory:\n");
+    char formatted_name[13]; // 8 + 1 + 3 + null
+    memset(formatted_name, 0, 13);
+
+    kprintf("Listing Root Directory:\n");
 
     // Loop until we hit the "End of Chain" marker (>= 0x0FFFFFF8)
     while(current_cluster < 0x0FFFFFF8)
@@ -111,18 +127,18 @@ void fat32_ls()
             }
 
             // 0xE5 = Unused/Deleted entry
-            if((unsigned char)dir[i].name[0] == 0xE5) continue;
+            if((unsigned char)dir[i].name[0] == 0xE5) { continue; }
 
-            // 0x0F = Long File Name entry (Skip these for simplicity for now)
-            if(dir[i].attr == 0x0F) continue;
+            // 0x0F = Long File Name entry
+            if(dir[i].attr == 0x0F) { continue; }
 
             // Check if it's a directory (Attribute 0x10) or File
             if(dir[i].attr & 0x10) { kprintf("[DIR]  "); }
             else                   { kprintf("[FILE] "); }
 
             // Print the filename and size
-            print_formatted_name(dir[i].name);
-            kprintf("  (%d bytes)\n", dir[i].size);
+            fat_to_filename(dir[i].name, formatted_name);
+            kprintf("%s\t(%d bytes)\n", formatted_name, dir[i].size);
         }
 
         // Get the next cluster in the chain
@@ -130,4 +146,109 @@ void fat32_ls()
     }
 
     free(buffer);
+}
+
+/* ... */
+void fat32_read(const char* fname)
+{
+    struct fat32_directory_entry file_entry;
+    int found = 0;
+    
+    // SEARCH FOR THE FILE
+    uint32_t dir_cluster = bpb.root_cluster;
+    uint32_t cluster_size_bytes = bpb.sectors_per_cluster * 512;
+    uint8_t* dir_buffer = (uint8_t*)malloc(cluster_size_bytes);
+    char formatted_name[13]; // 8 + 1 + 3 + null
+    memset(formatted_name, 0, 13);
+
+    while(dir_cluster < 0x0FFFFFF8 && !found)
+    {
+        uint32_t lba = cluster_to_lba(dir_cluster);
+        if(ide_read_sectors(0, lba, bpb.sectors_per_cluster, dir_buffer) != 0) 
+        {
+            kprintf("Read error in directory.\n");
+            free(dir_buffer);
+            return;
+        }
+
+        struct fat32_directory_entry* dir = (struct fat32_directory_entry*)dir_buffer;
+        int entries_count = cluster_size_bytes / sizeof(struct fat32_directory_entry);
+
+        for(int i = 0; i < entries_count; i++)
+        {
+            if(dir[i].name[0] == 0x00) { found = -1; break; }   // End of dir
+            if((unsigned char)dir[i].name[0] == 0xE5) continue; // Deleted
+            if(dir[i].attr == 0x0F) continue;                   // LFN
+            if(dir[i].attr & 0x10) continue;                    // Directory
+
+            // Convert "NAME    EXT" to "NAME.EXT"
+            fat_to_filename(dir[i].name, formatted_name);
+
+            // Compare (Case insensitive ideally, but exact match for now)
+            if(strncmp(fname, formatted_name, 12) == 0)
+            {
+                file_entry = dir[i];
+                found = 1;
+                break;
+            }
+        }
+        
+        if(found == 1 || found == -1) break;
+        dir_cluster = get_next_cluster(dir_cluster);
+    }
+    
+    free(dir_buffer);
+
+    if(!found || found == -1) {
+        kprintf("File not found: %s\n", fname);
+        return;
+    }
+
+    // READ THE FILE DATA
+    // Calculate size aligned to 512 bytes to prevent buffer overflow
+    uint32_t aligned_size = file_entry.size;
+    if (aligned_size % 512 != 0) 
+    {
+        aligned_size = (aligned_size + 512) & ~(511);
+    }
+
+    char* file_data = (char*)malloc(aligned_size);
+    char* data_ptr = file_data;
+    uint32_t current_file_cluster = ((uint32_t)file_entry.first_cluster_high << 16) | file_entry.first_cluster_low;
+    
+    uint32_t bytes_left = file_entry.size;
+
+    while(bytes_left > 0 && current_file_cluster < 0x0FFFFFF8)
+    {
+        uint32_t lba = cluster_to_lba(current_file_cluster);
+        
+        // Read the whole cluster
+        if(ide_read_sectors(0, lba, bpb.sectors_per_cluster, data_ptr) != 0) {
+            kprintf("Error reading file data.\n");
+            free(file_data);
+            return;
+        }
+
+        // Move pointer forward
+        //uint32_t bytes_to_copy = (bytes_left > cluster_size_bytes) ? cluster_size_bytes : bytes_left;
+        
+        // Note: ide_read_sectors writes full sectors. 
+        // We advance our pointer by the full cluster size to keep alignment 
+        // for the next read, or just track logic carefully.
+        data_ptr += cluster_size_bytes; 
+        
+        if(bytes_left < cluster_size_bytes) bytes_left = 0;
+        else bytes_left -= cluster_size_bytes;
+
+        // Get next cluster in the chain
+        current_file_cluster = get_next_cluster(current_file_cluster);
+    }
+
+    // PRINT OR USE DATA
+    for(unsigned int i = 0; i < file_entry.size; i++) 
+    {
+        kprintf("%c", file_data[i]);
+    }
+    
+    free(file_data);
 }

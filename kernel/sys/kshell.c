@@ -34,6 +34,7 @@ void kshell()
                 kprintf("\n  memmap   (Displays the regions of available memory.)");
                 kprintf("\n  pciconf  (List devices captured on the pci bus.)");
                 kprintf("\n  tasklist (Displays a list of currently running tasks.)");
+                kprintf("\n  reap     (Reaps any killed tasks so they can be reused again.)");
                 kprintf("\n  exit     (Exits the kernel shell.)");
             }
 
@@ -46,31 +47,38 @@ void kshell()
             else if(strncmp(s, "dir", strlen(s))==0 \
                  || strncmp(s, "ls",  strlen(s))==0)
             {
+                kprintf("\n");
                 fat32_ls();
             }
 
             else if(strncmp(s, "heapstat", strlen(s))==0)
             {
-                kprintf("\n\n");
+                kprintf("\n");
                 print_heap_info();
             }
 
             else if(strncmp(s, "memmap", strlen(s))==0)
             {
-                kprintf("\n\n");
+                kprintf("\n");
                 mmap_display_available();
             }
 
             else if(strncmp(s, "pciconf", strlen(s))==0)
             {
-                kprintf("\n\n");
+                kprintf("\n");
                 pci_conf_display();
             }
 
             else if(strncmp(s, "tasklist", strlen(s))==0)
             {
-                kprintf("\n\n");
+                kprintf("\n");
                 task_list();
+            }
+
+            else if(strncmp(s, "reap", strlen(s))==0)
+            {
+                kprintf("\n");
+                reaper();
             }
 
             else if(strncmp(s, "exit", strlen(s))==0)

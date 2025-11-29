@@ -80,6 +80,7 @@ extern void  free(void*);
 #define TASK_STATE_FREE     0   // Slot is free
 #define TASK_STATE_RUNNING  1   // Task is active and running
 #define TASK_STATE_ZOMBIE   2   // Task has exited and is waiting to be "reaped"
+#define TASK_STATE_SLEEPING 3
 
 // Defines the state of a task.
 // For our software switch, we only need to store the stack pointer.
@@ -90,14 +91,18 @@ struct task {
     uint32_t esp;           // Stack pointer for this task
     uint32_t stack_base;    // The original pointer from malloc, for freeing later
     uint8_t  state;         // 0 = inactive/free, 1 = active/running
+    uint32_t sleep_ticks;
 }__attribute__((packed));
 
 extern volatile uint8_t tasking_enabled;
 
-extern int task_exec(void(*task_function)(void), const char* name);
-extern uint32_t schedule(uint32_t current_esp);
+extern int task_exec(void(*task_function)(void), const char*);
+extern uint32_t schedule(uint32_t);
 extern void task_kill();
 extern void task_list();
+extern void task_tick();
+void task_sleep(uint32_t);
+extern void reaper();
 
 // KERNEL.ASM =========================================================
 extern void SYSTEM_HALT();

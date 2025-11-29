@@ -20,7 +20,7 @@ void tasking_init()
     const char* name = "kernel_main";
     current_task = 0;
     task_table[current_task].state = TASK_STATE_RUNNING;
-    task_table[current_task].esp   = 0;
+    task_table[current_task].esp = 0;
     task_table[current_task].stack_base = 0;
     for(int i=0; i<12; i++)
     {
@@ -90,13 +90,58 @@ int task_exec(void (*task_function)(void), const char* name)
     return(0); // Success
 }
 
-/* Cleans up memory and task state for any zombie tasks. */
-static void reaper()
+/* Called by the timer interrupt handler every tick */
+void task_tick()
 {
+    for(int i=0; i<MAX_TASKS; i++)
+    {
+        if(task_table[i].state == TASK_STATE_SLEEPING)
+        {
+            // Decrement the timer
+            if(task_table[i].sleep_ticks > 0) {
+                task_table[i].sleep_ticks--;
+            }
+
+            // If timer runs out, wake the task up
+            if(task_table[i].sleep_ticks == 0) {
+                task_table[i].state = TASK_STATE_RUNNING;
+            }
+        }
+    }
+}
+
+/* Puts the current task to sleep for 'ticks' amount of time */
+void task_sleep(uint32_t ticks)
+{
+    asm volatile("cli");
+
+    // Set the sleep duration and change state
+    task_table[current_task].sleep_ticks = ticks;
+    task_table[current_task].state = TASK_STATE_SLEEPING;
+
+    asm volatile("sti");
+
+    // Halt the TASK. This waits for the next interrupt (timer),
+    // which will trigger the scheduler. Since we marked ourselves
+    // as SLEEPING, the scheduler will switch to another task.
+    while(task_table[current_task].state == TASK_STATE_SLEEPING)
+    {
+        asm volatile("hlt");
+    }
+}
+
+/* Cleans up memory and task state for any zombie tasks. */
+void reaper()
+{
+    uint8_t cleaned_something = 0;
+
     for(int i = 0; i < MAX_TASKS; i++)
     {
         if(task_table[i].state == TASK_STATE_ZOMBIE)
         {
+            kprintf("Reaping killed task [%d 0x%x 0x%x %s]\n", \
+                i, task_table[i].esp ,task_table[i].stack_base, task_table[i].name);
+
             // Free the task's stack
             free((void*)task_table[i].stack_base);
 
@@ -105,7 +150,15 @@ static void reaper()
             task_table[i].stack_base = 0;
             task_table[i].esp = 0;
             memset(task_table[i].name, 0, 24);
+
+            cleaned_something = 1;
         }
+    }
+
+    // ...
+    if(!cleaned_something)
+    {
+        kprintf("Nothing to reap ...\n");
     }
 } 
 
@@ -116,11 +169,9 @@ uint32_t schedule(uint32_t current_esp)
     if(!tasking_enabled) { return(current_esp); }
     asm volatile("cli");
 
-    // Let's reap any task that was killed and marked as zombie by task_kill().
-    reaper();
-
     // Save the current task's stack.
-    if(task_table[current_task].state == TASK_STATE_RUNNING)
+    if(task_table[current_task].state == TASK_STATE_RUNNING \
+    || task_table[current_task].state == TASK_STATE_SLEEPING)
     {
         task_table[current_task].esp = current_esp;
     }
