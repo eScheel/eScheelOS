@@ -1,18 +1,14 @@
 eScheel OS Memory MAP:
 
 LOWER:
-    0x1000  - 0xFFFFF : N/A
-boot.bin:
-code:  0x7c00 - 0x7e00
-stack: 0x7c00
-
-stage2.bin:
-code:  0x1000 - 0x2000
-stack: 0x3000
-kload: 0x4000:0x0000: 0x40000
-
-buffer for reading directory entries and FAT tables
-0x8000:0x0000: 0x80000
+    0x0000  - 0x0fff  : ...
+    0x1000  - 0x2000  : stage2.bin
+    0x2000  - 0x2fff  : stage2 stack
+    0x3000  - 0x7bff  : ...
+    0x7c00  - 0x7dff  : boot.bin
+    0x7e00  - 0x3ffff : ...
+    0x40000 - 0x7ffff : temp kernel load
+    0x80000 - 0xfffff : directory entries and FAT tables
 
 UPPER:
     0x100000 - 0x1FFFFF : kernel .text .rodata .data .bss(stack)
