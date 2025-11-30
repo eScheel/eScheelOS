@@ -4,6 +4,7 @@
 #include <pit.h>
 #include <ide.h>
 #include <fat32.h>
+#include <io.h>
 #include <string.h>
 #include <convert.h>
 

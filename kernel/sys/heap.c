@@ -1,4 +1,5 @@
 #include <kernel.h>
+#include <io.h>
 #include <string.h>
 
 struct HEAP_info system_heap;

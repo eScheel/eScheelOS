@@ -2,16 +2,16 @@
 #include <vga.h>
 #include <pit.h>
 #include <pci.h>
-#include <ide.h>
 #include <fat32.h>
 #include <elf32.h>
+#include <io.h>
 #include <string.h>
 #include <convert.h>
 
 /* ... */
 void kshell()
 {
-    kprintf("\n\n++++ Kernel Shell v1.0 ++++\n");
+    kprintf("\n\n++++ Kernel Shell v1.1 ++++\n");
 
     char* s = (char*)malloc(1024);
     vga_enable_cursor();
@@ -47,8 +47,7 @@ void kshell()
                 vga_clear();
             }
 
-            else if(strncmp(s, "dir", strlen(s))==0 \
-                 || strncmp(s, "ls",  strlen(s))==0)
+            else if(strncmp(s, "ls",  strlen(s))==0)
             {
                 kprintf("\n");
                 fat32_ls();

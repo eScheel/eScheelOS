@@ -10,7 +10,6 @@ section .text
 global GDT_REINIT
 global CODE_SEG
 global DATA_SEG
-global TASK_SEG
 
 GDT_REINIT:
     lgdt[GDT_DESC]
@@ -49,14 +48,10 @@ GDT_ENTRY:
         db 0x92         ; Type flags
         db 0xcf         ; Limit flags
         db 0x00         ; Base (bits 23-31)
-    GDT_TASK:
-        dd 0x00000000   ; ...
-        dd 0x00000000   ; ...
 GDT_END:
 
 CODE_SEG: equ GDT_CODE-GDT_ENTRY
 DATA_SEG: equ GDT_DATA-GDT_ENTRY
-TASK_SEG: equ GDT_TASK-GDT_ENTRY
 
 GDT_DESC:
     dw GDT_END-GDT_ENTRY-1  ; Size of GDT is always (size-1)

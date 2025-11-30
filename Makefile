@@ -18,6 +18,7 @@ kernel:
 	nasm kernel/sys/io.asm    -f elf32 -o io.o
 
 	i386-unknown-freebsd14.3-gcc14 -c kernel/kernel.c           -o kernelc.o  -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
+	i386-unknown-freebsd14.3-gcc14 -c kernel/kshell.c           -o kshell.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/arch/isr.c         -o isrc.o     -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/vga.c      -o vga.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/pit.c      -o pit.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
@@ -27,15 +28,14 @@ kernel:
 	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/fat32.c    -o fat32.o    -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/elf32.c    -o elf32.o    -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/drivers/serial.c   -o serial.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
+	i386-unknown-freebsd14.3-gcc14 -c kernel/lib/io.c           -o ioc.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/lib/string.c       -o string.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/lib/convert.c      -o convert.o  -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/logo.c         -o logo.o     -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/mmap.c         -o mem.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/heap.c         -o heap.o     -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/paging.c       -o paging.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
-	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/io.c           -o ioc.o      -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
-	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/task.c         -o task.o     -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
-	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/kshell.c       -o kshell.o   -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
+	i386-unknown-freebsd14.3-gcc14 -c kernel/sys/tasking.c      -o task.o     -I kernel/include/ -std=gnu99 -ffreestanding -Wall -Wextra
 
 	i386-unknown-freebsd14.3-ld *.o -T link.ld -o kernel.elf
 

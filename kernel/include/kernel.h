@@ -119,8 +119,4 @@ extern void     OUTW(uint16_t, uint16_t);
 extern uint32_t INL(uint16_t);
 extern void     OUTL(uint16_t, uint32_t);
 
-// IO.C ===============================================================
-extern void kgets(char *);
-extern void kprintf(const char *, ...);
-
 #endif // __KERNEL_H

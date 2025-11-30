@@ -1,6 +1,6 @@
 #include <kernel.h>
 #include <pci.h>
-#include <vga.h>
+#include <io.h>
 #include <pit.h>
 #include <string.h>
 

@@ -1,5 +1,6 @@
 #include <kernel.h>
 #include <serial.h>
+#include <io.h>
 
 void serial_init()
 {

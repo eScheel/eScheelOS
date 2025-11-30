@@ -1,6 +1,7 @@
 #include <kernel.h>
 #include <ide.h>
 #include <pci.h>
+#include <io.h>
 #include <string.h>
 
 // For now just hard coding these assuming legacy.
@@ -140,8 +141,8 @@ static int ide_wait_for_ready()
     while(1) 
     {
         status = INB(ide_data_port + ATA_REG_STATUS);
-        if (status & ATA_SR_ERR) { kprintf("\nIDE ERROR\n"); return(-1); }
-        if (status & ATA_SR_DF)  { kprintf("\nIDE DRIVE FAULT\n"); return(-1); }
+        if (status & ATA_SR_ERR) { /*kprintf("\nIDE ERROR\n");*/ return(-1); }
+        if (status & ATA_SR_DF)  { /*kprintf("\nIDE DRIVE FAULT\n");*/ return(-1); }
         // If BSY bit is clear and DRDY is set, it's ready
         if (!(status & ATA_SR_BSY) && (status & ATA_SR_DRDY)) {
             break;
@@ -204,7 +205,7 @@ int ide_read_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buf
             uint8_t status = INB(ide_data_port + ATA_REG_STATUS);
             if (status & ATA_SR_ERR) 
             { 
-                kprintf("\nRead Error!");
+                //kprintf("\nRead Error!");
                 if(ints_enabled) { asm volatile("sti"); } 
                 return(-1); 
             }
@@ -231,8 +232,8 @@ static int ide_wait_for_drq()
     while(1) 
     {
         status = INB(ide_data_port + ATA_REG_STATUS);
-        if(status & ATA_SR_ERR) { kprintf("\nIDE Error waiting for DRQ!\n"); return(-1); }
-        if(status & ATA_SR_DF)  { kprintf("\nIDE Drive Fault waiting for DRQ!\n"); return(-1); }
+        if(status & ATA_SR_ERR) { /*kprintf("\nIDE Error waiting for DRQ!\n");*/ return(-1); }
+        if(status & ATA_SR_DF)  { /*kprintf("\nIDE Drive Fault waiting for DRQ!\n");*/ return(-1); }
         if(status & ATA_SR_DRQ) { break; } // Data is ready!
     }
     return 0;

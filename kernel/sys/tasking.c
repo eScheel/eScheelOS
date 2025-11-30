@@ -1,4 +1,5 @@
 #include <kernel.h>
+#include <io.h>
 #include <string.h>
 
 // The table of all tasks in the system

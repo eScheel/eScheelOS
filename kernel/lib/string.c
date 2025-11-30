@@ -1,5 +1,6 @@
 #include <string.h>
 
+//========================================================================================
 /* ... */
 size_t strlen(const char* str) 
 {
@@ -11,6 +12,7 @@ size_t strlen(const char* str)
 	return(len);
 }
 
+//========================================================================================
 /* ... */
 int strncmp(const char* str1, const char* str2, size_t n)
 {
@@ -28,6 +30,7 @@ int strncmp(const char* str1, const char* str2, size_t n)
     return 0;
 }
 
+//========================================================================================
 /* ... */
 void memset(void* data, uint8_t c, size_t n)
 {
@@ -39,6 +42,7 @@ void memset(void* data, uint8_t c, size_t n)
     } 
 }
 
+//========================================================================================
 /* ... */
 void memcpy(void* src, void* dst, size_t n)
 {

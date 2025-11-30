@@ -1,15 +1,11 @@
-#include <kernel.h>
+#include <io.h>
 #include <keyboard.h>
 #include <vga.h>
 
+//========================================================================================
 /* A simple kernel-level printf implementation. */
 void kprintf(const char *fmt, ...)
 {
-    // The EFLAGS register contains the "Interrupt Flag" (IF) bit (Bit 9). 
-    // If that bit is 1, interrupts are on.
-    uint32_t ints_enabled = (EFLAGS_VALUE() & 0x200);
-    asm volatile("cli");    // Disable interrupts to be safe.
-
     va_list args;
     va_start(args, fmt);
 
@@ -73,11 +69,9 @@ void kprintf(const char *fmt, ...)
     }
 
     va_end(args);
-
-    // Reenable interrupts if they were not already disabled.
-    if(ints_enabled) { asm volatile("sti"); }
 }
 
+//========================================================================================
 /* ... */
 void kgets(char *s)
 {

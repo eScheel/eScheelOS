@@ -1,6 +1,7 @@
 #include <kernel.h>
 #include <fat32.h>
 #include <ide.h>
+#include <io.h>
 #include <string.h>
 
 static struct fat32_bpb bpb;
