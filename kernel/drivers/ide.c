@@ -1,9 +1,7 @@
 #include <kernel.h>
 #include <ide.h>
 #include <pci.h>
-#include <vga.h>
 #include <string.h>
-#include <pit.h> // For timer_wait
 
 // For now just hard coding these assuming legacy.
 static uint16_t ide_data_port     = 0x1F0; // Primary Bus
@@ -14,7 +12,7 @@ static uint16_t ide_control_port  = 0x3F6; // Primary Bus
 // we only need to worry about 128 (Master) and 129 (Slave).
 struct ata_identify ata_ident[2];
 
-// ...
+// These will be used for handling situations where we try to read from a drive that is not present.
 static uint8_t drives[2];
 
 /* Waits ~400ns by reading the alternate status port 4 times. */
@@ -29,6 +27,7 @@ static void ide_delay_400ns()
 /* Initialize IDE drives. */
 void ide_init()
 {  
+    pci_probe_devices();
     int controller_found = 0;
 
     // Iterate all devices in the header structure until we find a controller..
@@ -50,7 +49,7 @@ void ide_init()
     // ...
     if(!controller_found) 
     {
-        vga_prints("No capable legacy IDE controller found.\n");
+        kprintf("No capable legacy IDE controller found.\n");
         SYSTEM_HALT();
     }
 
@@ -69,8 +68,6 @@ void ide_init()
         { 
             drive_select = ATA_SELECT_SLAVE;
         }
-        
-        //kprintf("\ndrive[%d][0x%x]: ", i, drive_select);
 
         // Select the drive.
         OUTB(ide_data_port + ATA_REG_DRIVE, drive_select);
@@ -140,8 +137,8 @@ static int ide_wait_for_ready()
     while(1) 
     {
         status = INB(ide_data_port + ATA_REG_STATUS);
-        if (status & ATA_SR_ERR) { vga_prints("\nIDE ERROR\n"); return(-1); }
-        if (status & ATA_SR_DF)  { vga_prints("\nIDE DRIVE FAULT\n"); return(-1); }
+        if (status & ATA_SR_ERR) { kprintf("\nIDE ERROR\n"); return(-1); }
+        if (status & ATA_SR_DF)  { kprintf("\nIDE DRIVE FAULT\n"); return(-1); }
         // If BSY bit is clear and DRDY is set, it's ready
         if (!(status & ATA_SR_BSY) && (status & ATA_SR_DRDY)) {
             break;
@@ -156,6 +153,10 @@ static int ide_wait_for_ready()
 int ide_read_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buffer)
 {
     if(drives[drive] == 0) { return(-1); }
+
+    // I will need to revisit this lock when I switch to interrupts on IDE.
+    uint32_t ints_enabled = (EFLAGS_VALUE() & 0x200);
+    asm volatile("cli");    // Disable interrupts to be safe.
 
     // This variable will hold 0b11100000 (Master) or 0b11110000 (Slave)
     uint8_t drive_cmd;
@@ -175,7 +176,10 @@ int ide_read_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buf
 
     // After selecting a drive (writing to 0x1F6), 
     // we must wait for that specific drive to report it is ready before sending the Sector Count and LBA registers.
-    if(ide_wait_for_ready() != 0) { return(-1); }
+    if(ide_wait_for_ready() != 0) { 
+        if(ints_enabled) { asm volatile("sti"); }
+        return(-1); 
+    }
     
     // Send sector count
     OUTB(ide_data_port + ATA_REG_SECCOUNT, num_sectors);
@@ -198,7 +202,8 @@ int ide_read_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buf
             uint8_t status = INB(ide_data_port + ATA_REG_STATUS);
             if (status & ATA_SR_ERR) 
             { 
-                vga_prints("\nRead Error!"); 
+                kprintf("\nRead Error!");
+                if(ints_enabled) { asm volatile("sti"); } 
                 return(-1); 
             }
             if (status & ATA_SR_DRQ) { break; } // Data is ready!
@@ -212,8 +217,8 @@ int ide_read_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buf
         read_buffer += 256; // Move buffer pointer to next sector
     }
 
-    // Success
-    return(0);
+    if(ints_enabled) { asm volatile("sti"); }
+    return(0);  // Success
 }
 
 /* Helper function to wait for the drive to request data (DRQ) */
@@ -223,8 +228,8 @@ static int ide_wait_for_drq()
     while(1) 
     {
         status = INB(ide_data_port + ATA_REG_STATUS);
-        if(status & ATA_SR_ERR) { vga_prints("\nIDE Error waiting for DRQ!\n"); return(-1); }
-        if(status & ATA_SR_DF)  { vga_prints("\nIDE Drive Fault waiting for DRQ!\n"); return(-1); }
+        if(status & ATA_SR_ERR) { kprintf("\nIDE Error waiting for DRQ!\n"); return(-1); }
+        if(status & ATA_SR_DF)  { kprintf("\nIDE Drive Fault waiting for DRQ!\n"); return(-1); }
         if(status & ATA_SR_DRQ) { break; } // Data is ready!
     }
     return 0;
@@ -234,6 +239,10 @@ static int ide_wait_for_drq()
 int ide_write_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buffer)
 {
     if(drives[drive] == 0) { return(-1); }
+
+    // I will need to revisit this lock when I switch to interrupts on IDE.
+    uint32_t ints_enabled = (EFLAGS_VALUE() & 0x200);
+    asm volatile("cli");    // Disable interrupts to be safe.
 
     // This variable will hold 0b11100000 (Master) or 0b11110000 (Slave)
     uint8_t drive_cmd;
@@ -253,7 +262,10 @@ int ide_write_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* bu
 
     // After selecting a drive (writing to 0x1F6), 
     // we must wait for that specific drive to report it is ready before sending the Sector Count and LBA registers.
-    if(ide_wait_for_ready() != 0) { return(-1); }
+    if(ide_wait_for_ready() != 0) { 
+        if(ints_enabled) { asm volatile("sti"); }
+        return(-1); 
+    }
     
     // Send sector count
     OUTB(ide_data_port + ATA_REG_SECCOUNT, num_sectors);
@@ -268,10 +280,13 @@ int ide_write_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* bu
 
     // Write the data, one sector at a time.
     uint16_t* write_buffer = (uint16_t*)buffer;
-    for (int s = 0; s < num_sectors; s++)
+    for(int s = 0; s < num_sectors; s++)
     {
         // Wait for the drive to be ready *for the data* (DRQ)
-        if(ide_wait_for_drq() != 0) { return(-1); }
+        if(ide_wait_for_drq() != 0) { 
+            if(ints_enabled) { asm volatile("sti"); }
+            return(-1); 
+        }
 
         // Write 256 16-bit words (512 bytes)
         for(int i = 0; i < 256; i++)
@@ -284,10 +299,13 @@ int ide_write_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* bu
     // Wait for the write to complete
     // After the last sector is sent, the drive will be busy
     // writing. We must wait for it to be ready again.
-    if(ide_wait_for_ready() != 0) { return(-1); }
+    if(ide_wait_for_ready() != 0) { 
+        if(ints_enabled) { asm volatile("sti"); }
+        return(-1); 
+    }
 
-    // Success
-    return(0);
+    if(ints_enabled) { asm volatile("sti"); }
+    return(0);  // Success
 }
 
 // This is the function called by IRQ14_HANDLER
@@ -296,7 +314,7 @@ void ide_interrupt_handler()
     // TODO: Work on switching to interrupt based as opposed to polling. I am having the most trouble.
     //       Once I get tasking down to a tee, then I should come back here and work on interrupts.
     //       Because I will need to stop a specific task as opposed to the whole cpu.
-    //vga_printc('*');
+    //kprintf("*");
     
     // For now, we just acknowledge the interrupt.
     // We must read the status register to clear the interrupt.

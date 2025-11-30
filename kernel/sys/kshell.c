@@ -70,7 +70,8 @@ void kshell()
                 pci_conf_display();
             }
 
-            else if(strncmp(s, "tasklist", strlen(s))==0)
+            else if(strncmp(s, "tasklist", strlen(s))==0 \
+                 || strncmp(s, "ps",       strlen(s))==0)
             {
                 kprintf("\n");
                 task_list();
@@ -82,25 +83,34 @@ void kshell()
                 reaper();
             }
 
-            else if(strncmp(s, "exec", strlen(s))==0)
-            {
-                file_t* fp = fat32_open("TEST");
-                uint32_t offset = elf32_parse_and_relocate(fp->base);
-                if(offset != 0xffffffff)
-                {
-                    task_exec((void* )offset, "test");
-                }
-                free(fp);
-            }
-
             else if(strncmp(s, "exit", strlen(s))==0)
             {
                 break;
             }
 
+            // Not a built in command. So we check for executables on the disk.
             else
             {
-                kprintf("\nUnknown Command [%s]", s);
+                file_t* fp = fat32_open(s);
+                if(fp)
+                {
+                    uint32_t offset = elf32_parse_and_relocate((uint8_t *)&fp->data);
+                    if(offset == 0xffffffff)
+                    {
+                        kprintf("\nNot a valid executable [%s]", s);
+                    }
+                    else if(offset == 0xfffffffe)
+                    {
+                        kprintf("\nNot a valid executable location!");
+                    }
+                    else {
+                        task_exec((void* )offset, s);
+                    }
+                    free(fp);
+                }
+                else {
+                    kprintf("\nUnknown Command [%s]", s);
+                }
             }
         }
     }

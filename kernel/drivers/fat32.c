@@ -33,7 +33,6 @@ void fat32_init()
 /* Helper: Converts a cluster number to a sector number (LBA). */
 uint32_t cluster_to_lba(uint32_t cluster)
 {
-    // Formula: Data_Start + ((Cluster - 2) * Sectors_Per_Cluster)
     return(data_start_lba + ((cluster - 2) * bpb.sectors_per_cluster));
 }
 
@@ -214,7 +213,7 @@ file_t* fat32_open(const char* fname)
     free(dir_buffer);
     if(!found || found == -1) 
     {
-        kprintf("File not found: %s\n", fname);
+        //kprintf("File not found: %s\n", fname);
         return((void* )0);
     }
 
@@ -229,41 +228,44 @@ file_t* fat32_open(const char* fname)
     // ...
     char* file_data = (char* )malloc(aligned_size);
     char* data_ptr = file_data;
+
     uint32_t current_file_cluster = ((uint32_t)file_entry.first_cluster_high << 16) | file_entry.first_cluster_low;
-    
     uint32_t bytes_left = file_entry.size;
 
     while(bytes_left > 0 && current_file_cluster < 0x0FFFFFF8)
     {
         uint32_t lba = cluster_to_lba(current_file_cluster);
         
-        // Read the whole cluster
-        if(ide_read_sectors(0, lba, bpb.sectors_per_cluster, data_ptr) != 0) 
+        // Calculate how many bytes we want from THIS cluster.
+        // It is either the full cluster OR the remainder of the file.
+        uint32_t chunk_size = (bytes_left < cluster_size_bytes) ? bytes_left : cluster_size_bytes;
+
+        // Calculate how many sectors that chunk needs. (chunk_size + 511) / 512
+        uint8_t sectors_to_read = (chunk_size + 511) / 512;
+
+        // Read ONLY the needed sectors.
+        if(ide_read_sectors(0, lba, sectors_to_read, data_ptr) != 0) 
         {
             kprintf("Error reading file data.\n");
             free(file_data);
             return((void* )0);
         }
         
-        // Note: ide_read_sectors writes full sectors. 
-        // We advance our pointer by the full cluster size to keep alignment 
-        // for the next read, or just track logic carefully.
-        data_ptr += cluster_size_bytes; 
-        
-        // ...
-        if(bytes_left < cluster_size_bytes) { bytes_left = 0; }
-        else { bytes_left -= cluster_size_bytes; }
+        // Advance pointers
+        data_ptr += chunk_size; 
+        bytes_left -= chunk_size;
 
         // Get next cluster in the chain
         current_file_cluster = get_next_cluster(current_file_cluster);
     }
 
-    // ..
-    file_t* ret = (file_t *)malloc(sizeof(file_t) + file_entry.size);
+    // Allocate a return buffer to hold file size and data to return to caller.
+    file_t* ret = (file_t *)malloc(sizeof(file_t)+file_entry.size);
     memset(ret, 0, sizeof(file_t)+file_entry.size);
 
+    // Fill in the info and data.
     ret->size = file_entry.size;
-    memcpy(file_data, ret->base, ret->size);
+    memcpy(file_data, (uint8_t* )&ret->data, ret->size);
 
     free(file_data);
     return(ret);

@@ -15,11 +15,10 @@ extern draw_logo
 extern memory_map_init
 extern REMAP_PICS
 extern IDT_INIT
+extern paging_init
 extern timer_init
 extern keyboard_init
-extern paging_init
 extern heap_init
-extern pci_probe_devices
 extern ide_init
 extern fat32_init
 extern serial_init
@@ -122,14 +121,6 @@ KERNEL_INIT:
     call vga_prints
     add  esp, 8
 
-    ; Probe for device controllers.
-    push dword str_pci_probe
-    call vga_prints
-    call pci_probe_devices
-    push dword str_okay
-    call vga_prints
-    add  esp, 8
-
     ; Initialize the IDE driver.
     push dword str_ide_init
     call vga_prints
@@ -195,7 +186,6 @@ str_page_init:  db "  identity paging .... ",0
 str_pit_init:   db "  pit timer .......... ",0
 str_kbd_init:   db "  keyboard driver .... ",0
 str_heap_init:  db "  system heap ........ ",0
-str_pci_probe:  db "  pci devices ........ ",0
 str_ide_init:   db "  ide driver ......... ",0
 str_fat32_init: db "  fat32 driver ....... ",0
 str_rs232_init: db "  serial driver ...... ",0

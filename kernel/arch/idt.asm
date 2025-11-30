@@ -56,9 +56,10 @@ IDT_INIT:
     inc  ecx
     cmp  ecx, 31        ; Exceptions are 0 - 31.
     jl  .ISR_LOOP
-    
+
     ; Loop is complete.
     ; Now, we manually set for the IRQS we want to use.(32-48)
+.IRQS:    
     push dword 32
     push dword IRQ0_HANDLER     ; PIT
     call IDT_SET_GATE
@@ -93,16 +94,16 @@ IDT_SET_GATE:
     mov  ebx, [ebp + 8]     ; Get the handler address (arg 1)
     
     ; Each IDT entry is 8 bytes, so we multiply the number by 8
-    shl  eax, 3                     ; eax = eax * 8
-    add  eax, IDT_PTR               ; eax is now the address of the correct IDT_ENTRY
-    mov  [eax], bx                  ; [eax + 0] = offset_low (lower 16 bits of handler address)    
-    mov  word [eax + 2], CODE_SEG   ; [eax + 2] = selector (our GDT code segment selector)
-    mov  byte [eax + 4], 0          ; [eax + 4] = zero (must be 0)
-    mov  byte [eax + 5], 0x8E       ; [eax + 5] = type flags (0x8E = 32-bit Interrupt Gate, Ring 0, Present)  
+    shl  eax, 3                                     ; eax = eax * 8
+    add  eax, IDT_PTR                               ; eax is now the address of the correct IDT_ENTRY
+    mov  [eax + IDT_ENTRY.offset_low], bx           ; [eax + 0] = offset_low (lower 16 bits of handler address)    
+    mov  word [eax + IDT_ENTRY.selector], CODE_SEG  ; [eax + 2] = selector (our GDT code segment selector)
+    mov  byte [eax + IDT_ENTRY.zero], 0             ; [eax + 4] = zero (must be 0)
+    mov  byte [eax + IDT_ENTRY.type], 0x8E          ; [eax + 5] = type flags (0x8E = 32-bit Interrupt Gate, Ring 0, Present)  
     
     ; [eax + 6] = offset_high (upper 16 bits of handler address)
-    shr  ebx, 16            ; Shift high bits of address into low bits
-    mov  [eax + 6], bx      ; Store them
+    shr  ebx, 16                                    ; Shift high bits of address into low bits
+    mov  [eax + IDT_ENTRY.offset_high], bx          ; Store them
 
     pop  ebp
     ret

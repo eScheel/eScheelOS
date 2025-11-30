@@ -2,7 +2,7 @@
 #include <string.h>
 
 struct HEAP_info system_heap;
-static uint32_t current_block_address; // This is our "high-water mark"
+static uint32_t current_block_address; // This is our high-water mark
 
 // Define our alignment boundary
 #define HEAP_ALIGNMENT 8
@@ -111,7 +111,7 @@ void* malloc(size_t sz)
         block_iter += current_block_total_size;
     }
 
-    /* If we're here, no suitable free block was found. */
+    /* If we're here, no suitable free block was found before the high-water mark. */
     
     // Out-of-Memory Check
     if((block_iter + total_needed) > system_heap.end)
@@ -160,16 +160,26 @@ void free(void* b)
     
     // Forward Coalesce. Check the block after this one
     uint32_t next_block_addr = (uint32_t)alloc + sizeof(malloc_t) + alloc->size;
-    if(next_block_addr < current_block_address)
-    {
-        malloc_t* next_alloc = (malloc_t*)next_block_addr;
-        if (next_alloc->reserved == 0)
-        {
-            // The next block is free, so merge it into the current one
-            alloc->size += sizeof(malloc_t) + next_alloc->size;
 
-            // Clear the old header
-            memset(next_alloc, 0, sizeof(malloc_t));
+    // Do some checks to make sure we don't go out of bounds.
+    if(current_block_address < system_heap.end)
+    {
+        if(next_block_addr < current_block_address)
+        {
+            malloc_t* next_alloc = (malloc_t*)next_block_addr;
+
+            // Prevents reading 4 bytes off the edge of the heap.
+            if((uint32_t)next_alloc + sizeof(malloc_t) <= system_heap.end)
+            {
+                if(next_alloc->reserved == 0)
+                {
+                    // The next block is free, so merge it into the current one
+                    alloc->size += sizeof(malloc_t) + next_alloc->size;
+
+                    // Clear the old header
+                    memset(next_alloc, 0, sizeof(malloc_t));
+                }
+            }
         }
     }
 

@@ -1,6 +1,5 @@
 #include <kernel.h>
 #include <string.h>
-#include <vga.h>
 
 /*
  * A 32-bit virtual address is split into three parts:

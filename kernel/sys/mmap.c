@@ -1,5 +1,4 @@
 #include <kernel.h>
-#include <vga.h>
 
 uint8_t main_memory_index;
 memory_region_t available_memory_map[SMAP_entry_max];
@@ -76,9 +75,9 @@ void memory_map_init(mmap_descriptor_t* mmap_desc)
      */
     if(available_memory_map[main_memory_index].base_low != KERNEL_PHYSICAL_BASE)
     {
-        vga_prints("\nmain_memory_offest(0x");
-        vga_printh(available_memory_map[main_memory_index].base_low);
-        vga_prints(") != kernel_offset(0x100000)\n");
+        // We only acocunt for base_low here. I'm sure we should eventually account for base_high as well.
+        kprintf("main_memory_offest(0x%x) != kernel_offset(0x100000)\n", available_memory_map[main_memory_index].base_low);
+        mmap_display_available();
 
         // For now we just halt, eventually we will remap ...
         SYSTEM_HALT();
@@ -92,11 +91,8 @@ void mmap_display_available()
     for(size_t i = 0; i < mmap_avail_entry_count; i++)
     {
         memory_region_t mmap_region = available_memory_map[i];
-        vga_printh(mmap_region.base_high);
-        vga_printh(mmap_region.base_low);
-        vga_prints(":");
-        vga_printh(mmap_region.length_high);
-        vga_printh(mmap_region.length_low);
-        vga_printc('\n');
+
+        kprintf("0x%x%x:0x%x%x\n", \
+            mmap_region.base_high, mmap_region.base_low, mmap_region.length_high, mmap_region.length_low);
     }
 }

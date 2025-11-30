@@ -44,6 +44,7 @@ struct _pci_device_hdr {
 
 extern struct _pci_device_hdr pci_device_hdr[];
 
-void pci_conf_display();
+extern void pci_probe_devices();
+extern void pci_conf_display();
 
 #endif  // __PCI_H

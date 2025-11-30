@@ -7,7 +7,7 @@
 struct _pci_device_hdr pci_device_hdr[256];
 
 /* ... */
-uint32_t pci_conf_read_dword(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset) 
+static uint32_t pci_conf_read_dword(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset) 
 {
     /* Create the 32-bit address.
     The critical part is building the 32-bit integer to send to the 0xCF8 address port. It's a bit-packed field.
@@ -141,6 +141,7 @@ void pci_probe_devices()
 /* Iterate the PCI devices and display information. */
 void pci_conf_display()
 {
+    pci_probe_devices();
     for(int i=0; i<256; i++)
     {
         // We know we have reached the end if vendor_id is 0.

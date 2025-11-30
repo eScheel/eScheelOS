@@ -34,7 +34,7 @@ void keyboard_init()
     return;
 }
 
-/* Allows callers to reset the keyboard buffer for next use. */
+/* Feels like only keyboard should reset the keyboard buffer for next use. */
 void keyboard_reset_buffer()
 {
     memset(keyboard_input_buffer, 0, 1024);

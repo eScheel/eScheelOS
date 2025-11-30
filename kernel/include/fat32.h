@@ -53,8 +53,8 @@ struct fat32_directory_entry {
 } __attribute__((packed));
 
 typedef struct {
-    uint8_t* base;
     uint32_t size;
+    uint8_t* data;
 }__attribute__((packed)) file_t;
 
 extern void fat32_ls();

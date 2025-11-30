@@ -26,6 +26,12 @@ uint32_t elf32_parse_and_relocate(uint8_t* base)
             // Is it PT_LOAD?
             if(phdr.p_type == 1)
             {
+                // Not a valid exec location.
+                if(phdr.p_paddr < 0x300000)
+                {
+                    return(0xfffffffe);
+                }
+
                 // dst = physical_addr , src = offset_in_hdr.
                 uint8_t* dst = (uint8_t *)phdr.p_paddr;
                 uint8_t* src = (uint8_t *)base + phdr.p_offset;
@@ -53,7 +59,6 @@ uint32_t elf32_parse_and_relocate(uint8_t* base)
 
     // Not a valid elf file.
     else {
-        kprintf("\nNot a valid elf ...");
         return(0xffffffff);
     }
 }
