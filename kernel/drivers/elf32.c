@@ -27,7 +27,7 @@ uint32_t elf32_parse_and_relocate(uint8_t* base)
             if(phdr.p_type == 1)
             {
                 // Not a valid exec location.
-                if(phdr.p_paddr < 0x300000)
+                if(phdr.p_paddr < 0x300000 || phdr.p_paddr > 0x3fffff)
                 {
                     return(0xfffffffe);
                 }

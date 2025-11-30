@@ -10,6 +10,7 @@ static volatile uint32_t current_task;
 // Flag to prevent scheduling before tasking is initialized
 volatile uint8_t tasking_enabled;
 
+//========================================================================================
 /* Initializes the multi-tasking system. */
 void tasking_init()
 {
@@ -31,6 +32,7 @@ void tasking_init()
     tasking_enabled = 1;
 }
 
+//========================================================================================
 /* Creates a new task and adds it to the task table. */
 int task_exec(void (*task_function)(void), const char* name)
 {
@@ -90,6 +92,7 @@ int task_exec(void (*task_function)(void), const char* name)
     return(0); // Success
 }
 
+//========================================================================================
 /* Called by the timer interrupt handler every tick */
 void task_tick()
 {
@@ -110,6 +113,7 @@ void task_tick()
     }
 }
 
+//========================================================================================
 /* Puts the current task to sleep for 'ticks' amount of time */
 void task_sleep(uint32_t ticks)
 {
@@ -130,9 +134,13 @@ void task_sleep(uint32_t ticks)
     }
 }
 
+//========================================================================================
 /* Cleans up memory and task state for any zombie tasks. */
 void reaper()
 {
+    // Since this is only called via user input in kshell, ints must be enabled.
+    asm volatile("cli");
+
     uint8_t cleaned_something = 0;
 
     for(int i = 0; i < MAX_TASKS; i++)
@@ -160,8 +168,11 @@ void reaper()
     {
         kprintf("Nothing to reap ...\n");
     }
+
+    asm volatile("sti");
 } 
 
+//========================================================================================
 /* Round Robin scheduler function called by the timer IRQ handler. */
 uint32_t schedule(uint32_t current_esp)
 {
@@ -191,6 +202,7 @@ uint32_t schedule(uint32_t current_esp)
     return(task_table[current_task].esp);
 }
 
+//========================================================================================
 /*
  * Marks the current task as a ZOMBIE.
  * It then spins, waiting for the scheduler (running as another task) to reap it.
@@ -207,6 +219,7 @@ void task_kill()
     while(1) { asm volatile("hlt"); }
 }
 
+//========================================================================================
 /* Displays a list of currently running tasks. */
 void task_list()
 {

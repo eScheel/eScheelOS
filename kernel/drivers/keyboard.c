@@ -26,6 +26,7 @@ static uint8_t shift_key_pressed;
 char keyboard_input_buffer[1024];
 static size_t keyboard_buffer_index;
 
+//========================================================================================
 /* Initialize the keyboard. */
 void keyboard_init()
 {
@@ -34,6 +35,7 @@ void keyboard_init()
     return;
 }
 
+//========================================================================================
 /* Feels like only keyboard should reset the keyboard buffer for next use. */
 void keyboard_reset_buffer()
 {
@@ -41,6 +43,7 @@ void keyboard_reset_buffer()
     keyboard_buffer_index = 0;
 }
 
+//========================================================================================
 /* ... */
 void keyboard_interrupt_handler()
 {

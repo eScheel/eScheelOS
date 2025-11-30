@@ -6,6 +6,7 @@
 
 struct _pci_device_hdr pci_device_hdr[256];
 
+//========================================================================================
 /* ... */
 static uint32_t pci_conf_read_dword(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset) 
 {
@@ -34,6 +35,7 @@ static uint32_t pci_conf_read_dword(uint8_t bus, uint8_t slot, uint8_t func, uin
     return INL(CONFIG_DATA);
 }
 
+//========================================================================================
 /* ... */
 void pci_probe_devices()
 {
@@ -137,7 +139,7 @@ void pci_probe_devices()
     }
 }
 
-
+//========================================================================================
 /* Iterate the PCI devices and display information. */
 void pci_conf_display()
 {

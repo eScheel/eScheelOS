@@ -11,30 +11,35 @@ struct video_graphics_array {
 // Main VGA? The idea is to have multiple of these in the future.
 static struct video_graphics_array vga;
 
+//========================================================================================
 /* Get the current position of cursor_x */
 uint16_t vga_get_x()
 {
 	return(vga.cursor_x);
 }
 
+//========================================================================================
 /* Get the current position of cursor_y */
 uint16_t vga_get_y()
 {
 	return(vga.cursor_y);
 }
 
+//========================================================================================
 /* Set the current position of cursor_x */
 void vga_set_x(uint16_t x)
 {
 	vga.cursor_x = x;
 }
 
+//========================================================================================
 /* Set the current position of cursor_y */
 void vga_set_y(uint16_t y)
 {
 	vga.cursor_y = y;
 }
 
+//========================================================================================
 /* Set the current screen color. */
 void vga_set_color(uint8_t c)
 {
@@ -42,6 +47,7 @@ void vga_set_color(uint8_t c)
 	// TODO: Save current screen, clear with new color, load current screen again.
 }
 
+//========================================================================================
 /* Initialize the vga memory. */
 void vga_init() 
 {
@@ -64,6 +70,7 @@ void vga_init()
     vga.cursor_x = 0;
 }
 
+//========================================================================================
 /* ... */
 void vga_update_cursor()
 {
@@ -81,6 +88,7 @@ void vga_update_cursor()
 	OUTB(0x3D5, index);
 }
 
+//========================================================================================
 /* Enables the blinky cursor. */
 void vga_enable_cursor()
 {
@@ -90,6 +98,7 @@ void vga_enable_cursor()
 	OUTB(0x3D5, (INB(0x3D5) & 0xE0) | 15);
 }
 
+//========================================================================================
 /* Disabled the blinky cursor. */
 void vga_disable_cursor()
 {
@@ -97,6 +106,7 @@ void vga_disable_cursor()
 	OUTB(0x3D5, 0x20);
 }
 
+//========================================================================================
 /* Scroll the screen when reaching the bottom. */
 static void vga_scroll()
 {
@@ -127,6 +137,7 @@ static void vga_scroll()
 	}
 }
 
+//========================================================================================
 /* Clear the screen on demand. */
 void vga_clear()
 {
@@ -145,6 +156,7 @@ void vga_clear()
     vga.cursor_x = 0;
 }
 
+//========================================================================================
 /* Put a character on the screen at a specific location. */
 void vga_putc(char c, size_t x, size_t y)
 {
@@ -153,6 +165,7 @@ void vga_putc(char c, size_t x, size_t y)
 	return;
 }
 
+//========================================================================================
 /* Prints the next sequential character to the screen. */
 void vga_printc(char c) 
 {
@@ -218,6 +231,7 @@ end_vga_printc:
 	vga_scroll();
 }
 
+//========================================================================================
 /* Prints a sequential string of characters to the screen. */
 void vga_prints(const char* data) 
 {
@@ -228,6 +242,7 @@ void vga_prints(const char* data)
     }
 }
 
+//========================================================================================
 /* Converts a string to 32bit hex value and then prints it out (without leading zeros). */
 void vga_printh(uint32_t h)
 {
@@ -272,6 +287,7 @@ void vga_printh(uint32_t h)
 	vga_prints(hexstr);
 }
 
+//========================================================================================
 /* Converts a string to 32bit decimal value and then prints it out. */
 void vga_printd(uint32_t d)
 {

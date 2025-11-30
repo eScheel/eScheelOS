@@ -36,6 +36,7 @@ uint32_t cluster_to_lba(uint32_t cluster)
     return(data_start_lba + ((cluster - 2) * bpb.sectors_per_cluster));
 }
 
+//========================================================================================
 /* Helper: Looks up the next cluster in the chain from the FAT. */
 uint32_t get_next_cluster(uint32_t current_cluster)
 {
@@ -59,6 +60,7 @@ uint32_t get_next_cluster(uint32_t current_cluster)
     return(next_cluster);
 }
 
+//========================================================================================
 /* Helper to convert FAT 8.3 name "NAME    EXT" to "name.ext" for comparison */
 void fat_to_filename(const char* src, char* dest)
 {
@@ -265,7 +267,7 @@ file_t* fat32_open(const char* fname)
 
     // Fill in the info and data.
     ret->size = file_entry.size;
-    memcpy(file_data, (uint8_t* )&ret->data, ret->size);
+    memcpy(file_data, &ret->data, ret->size);
 
     free(file_data);
     return(ret);

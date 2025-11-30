@@ -7,6 +7,7 @@ static uint32_t current_block_address; // This is our high-water mark
 // Define our alignment boundary
 #define HEAP_ALIGNMENT 8
 
+//========================================================================================
 /* Initialize the heap at 0x100000 bytes above the kernel and 0x100000 bytes in length. */
 void heap_init()
 {
@@ -33,6 +34,7 @@ void heap_init()
     current_block_address = system_heap.base;
 }
 
+//========================================================================================
 /* ... */
 void print_heap_info()
 {
@@ -44,6 +46,7 @@ void print_heap_info()
     kprintf("%xh\n",        system_heap.end);
 }
 
+//========================================================================================
 /* First Fit Memory Heap Allocator. */
 void* malloc(size_t sz)
 {
@@ -132,6 +135,7 @@ void* malloc(size_t sz)
     return((void*)block_iter + sizeof(malloc_t));
 }
 
+//========================================================================================
 /* Free an allocated block of Memory. */
 void free(void* b)
 {

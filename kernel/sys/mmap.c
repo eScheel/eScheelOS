@@ -6,6 +6,7 @@ memory_region_t available_memory_map[SMAP_entry_max];
 static size_t mmap_avail_entry_count;
 static uint64_t total_memory_size;
 
+//========================================================================================
 /*
 * Initializes the system memory map.
 *
@@ -84,6 +85,7 @@ void memory_map_init(mmap_descriptor_t* mmap_desc)
     }
 }
 
+//========================================================================================
 /* Displays the available memory regions. */
 void mmap_display_available()
 {

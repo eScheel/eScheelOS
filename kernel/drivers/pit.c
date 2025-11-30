@@ -6,6 +6,7 @@ extern uint32_t schedule(uint32_t);
 static volatile uint32_t timer_ticks;
 static volatile size_t timer_counter;
 
+//========================================================================================
 /* Initialize the pit with 100hz and square wave continous interrupts. */
 void timer_init()
 {
@@ -27,6 +28,7 @@ void timer_init()
     OUTB(0x40, divisor >> 8);       // Set high byte of divisor
 }
 
+//========================================================================================
 /* ... */
 uint32_t timer_interrupt_handler(uint32_t current_esp)
 {
@@ -47,6 +49,7 @@ uint32_t timer_interrupt_handler(uint32_t current_esp)
     return(schedule(current_esp));
 }
 
+//========================================================================================
 /* 
  * Blocks the whole cpu.
  * Wait for specified amount of time. 

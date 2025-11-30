@@ -31,6 +31,7 @@ void kshell()
                 kprintf("\nPossible Commands:");
                 kprintf("\n  clear    (Clears the console screen)");
                 kprintf("\n  ls       (List the contents of the root directory.)");
+                kprintf("\n  read     (Display the contents of a file.)");
                 kprintf("\n  heapstat (Prints current heap information.)");
                 kprintf("\n  memmap   (Displays the regions of available memory.)");
                 kprintf("\n  pciconf  (List devices captured on the pci bus.)");
@@ -50,6 +51,38 @@ void kshell()
             {
                 kprintf("\n");
                 fat32_ls();
+            }
+
+            else if(strncmp(s, "read", strlen("read"))==0)
+            {
+                kprintf("\n");
+
+                // Allocate a buffer for the file name.
+                char* file_name = (char* )malloc(strlen(s));
+                memset(file_name, 0, strlen(s));
+
+                // Fill in the allocated file name.
+                for(unsigned int i=0,n=5; n<strlen(s); i++,n++)
+                {
+                    file_name[i] = s[n];
+                }
+
+                // Open the file name for reading.
+                file_t* fp = fat32_open(file_name);
+                if(fp)
+                {
+                    // Display it.
+                    for(unsigned int i=0; i<fp->size; i++)
+                    {
+                        kprintf("%c", fp->data[i]);
+                    }
+                    free(fp);
+                }
+                else {
+                    kprintf("No such file [%s]\n", file_name);
+                }
+
+                free(file_name);
             }
 
             else if(strncmp(s, "heapstat", strlen(s))==0)
@@ -94,7 +127,7 @@ void kshell()
                 file_t* fp = fat32_open(s);
                 if(fp)
                 {
-                    uint32_t offset = elf32_parse_and_relocate((uint8_t *)&fp->data);
+                    uint32_t offset = elf32_parse_and_relocate(fp->data);
                     if(offset == 0xffffffff)
                     {
                         kprintf("\nNot a valid executable [%s]", s);

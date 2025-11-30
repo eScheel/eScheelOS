@@ -15,6 +15,7 @@ struct ata_identify ata_ident[2];
 // These will be used for handling situations where we try to read from a drive that is not present.
 static uint8_t drives[2];
 
+//========================================================================================
 /* Waits ~400ns by reading the alternate status port 4 times. */
 static void ide_delay_400ns()
 {
@@ -24,6 +25,7 @@ static void ide_delay_400ns()
     INB(ide_control_port + ATA_REG_ALT_STATUS);
 }
 
+//========================================================================================
 /* Initialize IDE drives. */
 void ide_init()
 {  
@@ -130,6 +132,7 @@ void ide_init()
     }
 }
 
+//========================================================================================
 /* Helper function to wait for the drive to be ready */
 static int ide_wait_for_ready()
 {
@@ -147,9 +150,8 @@ static int ide_wait_for_ready()
     return 0;
 }
 
-/*
- * Reads num_sectors from lba into buffer. This uses Polling PIO.
- */
+//========================================================================================
+/* Reads num_sectors from lba into buffer. This uses Polling PIO. */
 int ide_read_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buffer)
 {
     if(drives[drive] == 0) { return(-1); }
@@ -221,6 +223,7 @@ int ide_read_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buf
     return(0);  // Success
 }
 
+//========================================================================================
 /* Helper function to wait for the drive to request data (DRQ) */
 static int ide_wait_for_drq()
 {
@@ -235,6 +238,7 @@ static int ide_wait_for_drq()
     return 0;
 }
 
+//========================================================================================
 /* Writes num_sectors from lba from buffer. */
 int ide_write_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* buffer)
 {
@@ -308,6 +312,7 @@ int ide_write_sectors(uint8_t drive, uint32_t lba, uint8_t num_sectors, void* bu
     return(0);  // Success
 }
 
+//========================================================================================
 // This is the function called by IRQ14_HANDLER
 void ide_interrupt_handler()
 {
