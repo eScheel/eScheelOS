@@ -23,7 +23,7 @@ static char scancode_to_ascii_shifted[] = {                                     
 static uint8_t shift_key_pressed; 
 //static uint8_t caps_key_pressed;
 
-char keyboard_input_buffer[1024];
+volatile char keyboard_input_buffer[1024];
 static size_t keyboard_buffer_index;
 
 //========================================================================================
@@ -39,7 +39,9 @@ void keyboard_init()
 /* Feels like only keyboard should reset the keyboard buffer for next use. */
 void keyboard_reset_buffer()
 {
-    memset(keyboard_input_buffer, 0, 1024);
+    for(int i = 0; i < 1024; i++) {
+        keyboard_input_buffer[i] = 0;
+    }
     keyboard_buffer_index = 0;
 }
 

@@ -21,7 +21,7 @@
 #define right_shift_released    0xb6
 #define caps_lock_released      0xba
 
-extern char keyboard_input_buffer[];
+extern volatile char keyboard_input_buffer[];
 
 extern void keyboard_reset_buffer();
 

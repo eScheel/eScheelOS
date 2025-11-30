@@ -25,7 +25,8 @@ void kshell()
         kgets(s);
 
         // If command is not empty, process it.
-        if(*s) {
+        if(*s) 
+        {
             if(strncmp(s, "help", strlen(s))==0)
             {
                 kprintf("\nPossible Commands:");
@@ -81,7 +82,6 @@ void kshell()
                 else {
                     kprintf("No such file [%s]\n", file_name);
                 }
-
                 free(file_name);
             }
 
@@ -150,5 +150,7 @@ void kshell()
 
     vga_disable_cursor();
     free(s);
+
+    kprintf("\nkshell stopped.");
     task_kill();
 }
