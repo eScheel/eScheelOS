@@ -3,10 +3,12 @@
 all: boot clean-boot kernel clean-kernel
 
 boot:
-	nasm boot/boot.asm -f bin -o boot.bin
+	nasm boot/mbr.asm    -f bin -o mbr.bin
+	nasm boot/boot.asm   -f bin -o boot.bin
 	nasm boot/stage2.asm -f bin -o stage2.bin
-	
-	dd if=boot.bin   of=/home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd bs=512 conv=notrunc
+
+	dd if=mbr.bin    of=/home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd bs=446 conv=notrunc count=1
+	dd if=boot.bin   of=/home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd bs=512 conv=notrunc seek=63
 	dd if=stage2.bin of=/home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd bs=512 conv=notrunc seek=8
 
 kernel:
@@ -39,7 +41,9 @@ kernel:
 
 	i386-unknown-freebsd14.3-ld *.o -T link.ld -o kernel.elf
 
-	mcopy -i /home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd kernel.elf ::/kernel.elf
+	sudo mdconfig -a -t vnode -f ~/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd -u 0
+	sudo mcopy -i /dev/md0s1 kernel.elf ::/
+	sudo mdconfig -d -u 0
 
 clean-boot:
 	rm -rv boot.bin stage2.bin 

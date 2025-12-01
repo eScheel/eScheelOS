@@ -136,7 +136,10 @@ void kshell()
                         kprintf("\nNot a valid executable location!");
                     }
                     else {
-                        task_exec((void* )offset, s);
+                        if(task_exec((void* )offset, s) == 0)
+                        {
+                            // Wait for program to finish before shell resumes.
+                        }
                     }
                     free(fp);
                 }

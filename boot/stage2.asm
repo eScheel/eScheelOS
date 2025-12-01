@@ -264,10 +264,15 @@ GET_NEXT_CLUSTER:
 
 ;=============================================================================================
 
-;
-; DISK_READ (Standard Int 13h Extensions)
-; Input: EAX = LBA, CX = Count, ES:BX = Buffer
-;
+; Disk Address Packet (DAP)
+dap:
+    db 0x10
+    db 0
+dap_count: dw 0
+dap_off:   dw 0
+dap_seg:   dw 0
+dap_lba:   dq 0
+
 DISK_READ:
     pushad
     mov [dap_lba],   eax
@@ -281,15 +286,6 @@ DISK_READ:
     jc KERNEL_LOAD_FAILED
     popad
     ret
-
-; Disk Address Packet (DAP)
-dap:
-    db 0x10
-    db 0
-dap_count: dw 0
-dap_off:   dw 0
-dap_seg:   dw 0
-dap_lba:   dq 0
 
 ;=============================================================================================
 

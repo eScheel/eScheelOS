@@ -14,10 +14,6 @@
 jmp short ENTRY
 nop
 ;
-;dd if=/dev/zero of=/home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd bs=512 count=4949278 conv=notrunc status=progress
-;
-;newfs_msdos -F 32 -S 512 -m 0xf8 -u 63 -o 0 -h 16 -c 64 -s 4949278 /home/jscheel/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd
-;
 ; TODO: Let the driver fill in some of these values to be more dynamic.
 ;
 ; FAT32 BIOS Parameter Block (BPB)
@@ -33,22 +29,22 @@ Media           db 0xF8
 FATSz16         dw 0            ; 0 for FAT32
 SecPerTrk       dw 63
 NumHeads        dw 16
-HiddenSec       dd 0
-TotalSec32      dd 4949278
+HiddenSec       dd 63
+TotalSec32      dd 4917018
 ;
 ; FAT32 Extended BPB
 ;
-FATSz32         dd 605
+FATSz32         dd 601
 ExtFlags        dw 0
 FSVer           dw 0
 RootClus        dd 2
 FSInfo          dw 1
-BkBootSec       dw 6
+BkBootSec       dw 2
 Reserved        times 12 db 0
 DriveNum        db 0x80
 Reserved1       db 0
 BootSig         db 0x29
-VolID           dd 0x7A711AFA
+VolID           dd 0x8AD01C06
 VolLab          db 'ESCHEEL OS ' ; 11 Bytes
 FilSysType      db 'FAT32   '    ; 8 Bytes
 
@@ -59,7 +55,6 @@ stage2_size equ 4096
 stage2_lba  equ 8           ; Sector Offset.
 
 ENTRY:
-    cld                         ; Ensures that string manipulation instructions (like movsb, lodsb, etc.) increment their pointers
     cli                         ; Disable Interrupts.
     xor ax, ax                  ; Set ax to zero.
     mov ds, ax                  ; Initialize data segment register.
@@ -157,6 +152,4 @@ ERROR:
     jmp .LOOP   ; Incase a NMI fires.
 
 ;=============================================================================================
-
-times 510-($-$$) db 0
-dw 0xAA55
+times 512-($-$$) db 0

@@ -17,7 +17,9 @@ void fat32_init()
     memset(data, 0, 512); 
 
     // Read the sector into the allocated buffer.
-    ide_read_sectors(0, 0, 1, data);
+    // Not sure how to dynamically get this value just yet.
+    // But we know our partition starts at lba 63.
+    ide_read_sectors(0, 63, 1, data);
 
     // Copy the BPB of the sector into our data structure.
     memcpy(data, &bpb, sizeof(struct fat32_bpb));
@@ -63,7 +65,7 @@ uint32_t get_next_cluster(uint32_t current_cluster)
 
 //========================================================================================
 /* Helper to convert FAT 8.3 name "NAME    EXT" to "name.ext" for comparison */
-void fat_to_filename(const char* src, char* dest)
+static void fat_to_filename(const char* src, char* dest)
 {
     int i, j = 0;
     
