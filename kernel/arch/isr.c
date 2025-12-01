@@ -48,6 +48,7 @@ struct registers
 /* ... */
 void fault_handler(struct registers* regs)
 {
+    vga_disable_cursor();
     vga_printc('\n');
     vga_printd(regs->int_no);
     vga_prints(": ");
