@@ -37,7 +37,6 @@ void kshell()
                 kprintf("\n  memmap   (Displays the regions of available memory.)");
                 kprintf("\n  pciconf  (List devices captured on the pci bus.)");
                 kprintf("\n  tasklist (Displays a list of currently running tasks.)");
-                kprintf("\n  reap     (Reaps any killed tasks so they can be reused again.)");
                 kprintf("\n  exit     (Exits the kernel shell.)");
             }
 
@@ -109,12 +108,6 @@ void kshell()
                 task_list();
             }
 
-            else if(strncmp(s, "reap", strlen(s))==0)
-            {
-                kprintf("\n");
-                reaper();
-            }
-
             else if(strncmp(s, "exit", strlen(s))==0)
             {
                 break;
@@ -138,7 +131,10 @@ void kshell()
                     else {
                         if(task_exec((void* )offset, s) == 0)
                         {
-                            // Wait for program to finish before shell resumes.
+                            wait_for_task(s);
+                        }
+                        else {
+                            kprintf("\nFailed to execute %s", s);
                         }
                     }
                     free(fp);

@@ -13,21 +13,16 @@ extern void kshell();
 /* ... */
 void kernel_main()
 {
-    kprintf("Initialization complete! Main task started.\n"); 
-
-    // ...
+    kprintf("Initialization complete! Main task started.\n");
     kprintf("Attempting to start the kernel shell task ... ");
-    if(task_exec(kshell, "kshell") != 0)
+    if(task_exec(kshell, "kshell") == 0)
     {
-        kprintf("Failed to start the kernel shell.\n");
-        goto kernel_idle;
+        kprintf("[OK]");
     }
-    kprintf("[OK]");
 
-    // ...
-kernel_idle:
     while(1)
     {
+        reaper();
         asm volatile("hlt");
     }
 }

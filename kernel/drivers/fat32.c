@@ -265,7 +265,7 @@ file_t* fat32_open(const char* fname)
     }
 
     // Allocate a return buffer to hold file size and data to return to caller.
-    file_t* ret = (file_t *)malloc(sizeof(file_t)+file_entry.size);
+    file_t* ret = (file_t *)malloc(sizeof(file_t) + file_entry.size);
     memset(ret, 0, sizeof(file_t)+file_entry.size);
 
     // Fill in the info and data.

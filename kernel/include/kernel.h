@@ -101,8 +101,9 @@ extern uint32_t schedule(uint32_t);
 extern void task_kill();
 extern void task_list();
 extern void task_tick();
-void task_sleep(uint32_t);
+extern void task_sleep(uint32_t);
 extern void reaper();
+extern void wait_for_task(const char*);
 
 // KERNEL.ASM =========================================================
 extern void SYSTEM_HALT();

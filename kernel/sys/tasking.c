@@ -40,6 +40,15 @@ int task_exec(void (*task_function)(void), const char* name)
     asm volatile("cli");
     int task_index = -1;
 
+    for(int i=0; i<MAX_TASKS; i++)
+    {
+        if(strncmp(name, task_table[i].name, strlen(name))==0)
+        {
+            asm volatile("sti");
+            return(task_index);
+        }
+    }
+
     // Find a free task slot
     for(int i=0; i<MAX_TASKS; i++)
     {
@@ -142,15 +151,10 @@ void reaper()
     // Since this is only called via user input in kshell, ints must be enabled.
     asm volatile("cli");
 
-    uint8_t cleaned_something = 0;
-
-    for(int i = 0; i < MAX_TASKS; i++)
+    for(int i=0; i<MAX_TASKS; i++)
     {
         if(task_table[i].state == TASK_STATE_ZOMBIE)
         {
-            kprintf("Reaping killed task [%d 0x%x 0x%x %s]\n", \
-                i, task_table[i].esp ,task_table[i].stack_base, task_table[i].name);
-
             // Free the task's stack
             free((void*)task_table[i].stack_base);
 
@@ -159,19 +163,35 @@ void reaper()
             task_table[i].stack_base = 0;
             task_table[i].esp = 0;
             memset(task_table[i].name, 0, 24);
-
-            cleaned_something = 1;
         }
     }
 
-    // ...
-    if(!cleaned_something)
+    asm volatile("sti");
+}
+
+//========================================================================================
+/* ... */
+void wait_for_task(const char* s)
+{
+    static uint8_t is_active = 0;
+    int i;
+    for(i=0; i<MAX_TASKS; i++)
     {
-        kprintf("Nothing to reap ...\n");
+        if(strncmp(s, task_table[i].name, strlen(s))==0)
+        {
+            is_active = 1;
+            break;
+        }
     }
 
-    asm volatile("sti");
-} 
+    if(is_active)
+    {
+        while(task_table[i].state == TASK_STATE_RUNNING)
+        {
+            asm volatile("hlt");
+        }
+    }
+}
 
 //========================================================================================
 /* Round Robin scheduler function called by the timer IRQ handler. */
