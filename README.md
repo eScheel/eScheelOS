@@ -2,7 +2,7 @@
 
 eScheel Operating System.
 
-Eventually targeted for x86_64 only.
+Eventually targeted for x86 32-bit only.
 
 Really just a reason to learn and write in assembly.
 I'm not very good at this, and probably made some horrible design choices.
@@ -14,9 +14,9 @@ Identity mapped paging with no page allocators implemented.
 Has a heap allocater though.
 
 Expects a legacy IDE controller to be found. ATA-1 
-FAT32 Capable. (Kind of) This is where I called it quits.
+FAT32 Capable. (Read Only)
 
-Round Robin based multi-tasking!
+Round Robin based multi-tasking using the PIT!
 
 -----------------------------------------------------------------------------------
 
