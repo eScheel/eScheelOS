@@ -5,7 +5,8 @@
 ;   Author: Jacob Scheel
 ;
 ;   This code will do the following:
-;       1) 
+;       1) Relocate itself to 0x1000 and parse the partition table for an active parition.
+;       2) We should hopefully find boot.bin at the fat32 partition and load and execute it.
 ;
 [org 0x1000]
 [bits 16]
