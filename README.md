@@ -13,7 +13,7 @@ BIOS boot only. We've rolled our own. This was the funnest part.
 Identity mapped paging with no page allocators implemented.
 Has a heap allocater though.
 
-Expects a legacy IDE controller to be found. ATA-1 
+Expects a legacy IDE controller to be found. ATA-1  
 FAT32 Capable. (Read Only)
 
 Round Robin based multi-tasking using the PIT!
