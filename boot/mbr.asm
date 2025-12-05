@@ -8,16 +8,16 @@
 ;       1) Relocate itself to 0x1000 and parse the partition table for an active parition.
 ;       2) We should hopefully find boot.bin at the fat32 partition and load and execute it.
 ;
+;   dd if=/dev/zero of=~/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd bs=512 count=4949274 conv=notrunc status=progress
+;   sudo mdconfig -a -t vnode -f ~/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd -u 0
+;   sudo gpart create -s mbr /dev/md0
+;   sudo gpart add -t fat32 -b 63 -s 4917535 /dev/md0
+;   sudo gpart set -a active -i 1 /dev/md0
+;   sudo newfs_msdos -F 32 -r 32 -S 512 -m 0xf8 -u 63 -o 63 -c 64 -s 4917535 /dev/md0s1
+;   sudo mdconfig -d -u 0
+;
 [org 0x1000]
 [bits 16]
-
-;dd if=/dev/zero of=~/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd bs=512 count=4949274 conv=notrunc status=progress
-;sudo mdconfig -a -t vnode -f ~/VirtualBox\ VMs/eScheel\ OS/eScheel\ OS.vhd -u 0
-;sudo gpart create -s mbr /dev/md0
-;sudo gpart add -t fat32 -b 63 -s 4917535 /dev/md0
-;sudo gpart set -a active -i 1 /dev/md0
-;sudo newfs_msdos -F 32 -r 32 -S 512 -m 0xf8 -u 63 -o 63 -c 64 -s 4917535 /dev/md0s1
-;sudo mdconfig -d -u 0
 
 ;=============================================================================================
 ENTRY:
@@ -29,6 +29,7 @@ ENTRY:
     mov ss, ax                  ; Initialize stack segment register.
     mov ax, 0x7c00              ;
     mov sp, ax                  ; sp = 0x7c00 just below boot code.
+
 .RELOCATE:
     mov cx, 512
     mov si, 0x7c00
@@ -40,44 +41,52 @@ ENTRY:
 RELOCATED:
     mov [boot_drive], dl
     mov bx, PARTITION_TABLE_OFFSET
-    mov cx, 4   ; 4 partition tables.
+    mov cx, 4           ; 4 partition tables.
+
 .SCAN_LOOP:
     cmp byte [bx], 0x80 ; Check for Active Boot Flag
     je  LOAD_BOOT
+
     add bx, 16          ; 16 bit wide partition tables.
-    loop .SCAN_LOOP
+    loop .SCAN_LOOP     ; Do the next one until cx is zero.
 
     sti
+
     ; If we fall through, no bootable partition found
     jmp ERROR_SCAN
 
 ;=============================================================================================
 LOAD_BOOT:
     mov  eax, [bx + 8]  ; Copy LBA from partition entry to DAP
-    sti
     call DISK_READ
-    jmp  0:0x7C00
+    jmp  0:boot_addr
+
+boot_addr equ   0x7c00
 
 ;=============================================================================================
+; Disk Address Packet for int 0x13, ah=0x42
 dap:
-    .size     db 0x10
-    .reserved db 0
-    .count    dw 1
-    .offset   dw 0x7c00
-    .segment  dw 0
-    .lba      dd 0
-    .lba_high dd 0
+    db 0x10             ; Size of this packet (16 bytes)
+    db 0                ; Reserved, always 0
+.sectors:
+    dw 1                ; Number of sectors to read.
+.offset:
+    dw boot_addr
+.segment:
+    dw 0
+.lba_start:
+    dq 0                ; 64-bit starting LBA
 
 DISK_READ:
-    mov [dap.lba], eax
-    mov [dap.lba_high], dword 0     ; Assuming < 2TB for 32-bit LB
-    mov ah, 0x42
-    mov dl, [boot_drive]
-    mov si, dap
-    int 0x13
-    jc  ERROR_READ
+    mov dword [dap.lba_start], eax
+    mov ah, 0x42                ; AH = The "Extended Read" function
+    mov dl, [boot_drive]        ; DL = Drive number
+    mov si, dap                 ; DS:SI -> Pointer to our DAP structure
+    int 0x13                    ; Call the BIOS interrupt
+    jc  ERROR_READ              ; Check for errors (carry flag is set on failure)
     ret
 
+;=============================================================================================
 msg_scan_failed: db "Failed to find an active partition.",0
 msg_read_failed: db "Failed to read the drive.",0
 
@@ -96,6 +105,7 @@ ERROR:
     hlt
     jmp .LOOP
 
+;=============================================================================================
 ;   Prints a character to the screen.
 ;   Caller must put character in al register.
 ;
@@ -129,7 +139,6 @@ boot_drive: db  0
 ; MBR Partition Table
 ; We must pad our code from its end ($) up to the partition table offset (446 decimal, or 0x1BE).
 ; This is only present because some real hardware fails to boot without it.
-
 times 446-($-$$) db 0
 PARTITION_TABLE_OFFSET:
 

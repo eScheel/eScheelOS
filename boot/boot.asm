@@ -50,10 +50,6 @@ FilSysType      db 'FAT32   '    ; 8 Bytes
 
 ;=============================================================================================
 
-stage2_addr equ 0x1000
-stage2_size equ 4096
-stage2_lba  equ 8           ; Sector Offset.
-
 ENTRY:
     cli                         ; Disable Interrupts.
     xor ax, ax                  ; Set ax to zero.
@@ -80,31 +76,36 @@ ENTRY:
     mov  dl, [DriveNum]
     jmp  0:stage2_addr           ; Leave to stage2.
 
+stage2_addr equ 0x1000
+stage2_size equ 4096
+stage2_lba  equ 8           ; Sector Offset.
+
 ;=============================================================================================
 
 ; Disk Address Packet for int 0x13, ah=0x42
-DAP:
+dap:
     db 0x10             ; Size of this packet (16 bytes)
     db 0                ; Reserved, always 0
-.SECTORS:
+.sectors:
     dw 0                ; Number of sectors to read. Will be filled in LOAD_KERNEL
-.BUFFER:
-    dd stage2_addr      ; 32-bit flat address.
-.LBA_START:
+.offset:
+    dw stage2_addr
+.segment:
+    dw 0
+.lba_start:
     dq stage2_lba       ; 64-bit starting LBA
 
 DISK_READ:
     mov ax, stage2_size / 512
-    mov [DAP.SECTORS], ax
+    mov [dap.sectors], ax
     mov ah, 0x42                ; AH = The "Extended Read" function
     mov dl, [DriveNum]          ; DL = Drive number
-    mov si, DAP                 ; DS:SI -> Pointer to our DAP structure
+    mov si, dap                 ; DS:SI -> Pointer to our DAP structure
     int 0x13                    ; Call the BIOS interrupt
     jc STAGE2_FAILED            ; Check for errors (carry flag is set on failure)
     ret
 
 ;=============================================================================================
-
 ;   Prints a character to the screen.
 ;   Caller must put character in al register.
 ;
@@ -132,7 +133,6 @@ BIOS_PRINTS_DONE:
     ret
 
 ;=============================================================================================
-
 msg_disk_reset_failed: db 'error: Failed resetting drive.',0
 msg_stage2_failed:     db 'error: Failed loading stage2.',0
 

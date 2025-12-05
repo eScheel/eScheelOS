@@ -418,7 +418,7 @@ BIOS_VIDEO_MODE:
 BIOS_MEMORY_MAP:
     xor ebx, ebx         ; EBX must be 0 for the first call.
     xor bp, bp           ; BP will count the number of valid entries
-    mov di, MMAP_DESC    ; Point DI to the start of the entries array. ES is 0.
+    mov di, mmap_desc    ; Point DI to the start of the entries array. ES is 0.
     add di, 4            ; I guess if we don't do this then int 15 gets stuck? Need to pass count anyway.
 .LOOP:
     mov eax, 0xE820                         ; E820 function number.
@@ -439,7 +439,7 @@ BIOS_MEMORY_MAP:
     jz .SKIPENT
     ; Check ACPI 3.0 "ignore this entry" bit if we got a 24-byte response.
     cmp  cl, 20
-    jbe .NOTACPI3
+    jbe .NOTACPI3   
     test byte [es:di + SMAP_ENTRY.acpi], 1
     je  .SKIPENT
 .NOTACPI3:
@@ -448,7 +448,7 @@ BIOS_MEMORY_MAP:
 .SKIPENT:
     test ebx, ebx           ; If EBX is 0, we are at the end of the list.
     jnz .LOOP               ; If not zero, continue to get the next entry.
-    mov [MMAP_DESC], bp     ; Store the final count of valid entries.
+    mov [mmap_desc], bp     ; Store the final count of valid entries.
     clc                     ; Clear carry flag to indicate success.
     ret
 .ERROR:
@@ -468,7 +468,7 @@ endstruc
 SMAP_ENTRY_max equ 32
 
 ; A structure to hold the entire memory map, which will be passed to the kernel.
-MMAP_DESC:
+mmap_desc:
     dd 0                                               ; Number of valid entries we found
     times (SMAP_ENTRY_max * SMAP_ENTRY_size)  db 0     ; Array of entries
 
@@ -519,7 +519,7 @@ BITS32:
     xor ebx, ebx
     mov dl, [boot_drive]      ; Pass boot drive to kernel.
     mov cl, [video_mode]      ; Pass default video mode to kernel.
-    mov bx,  MMAP_DESC        ; Pass memory map buffer address to kernel.
+    mov bx,  mmap_desc        ; Pass memory map buffer address to kernel.
 
     ; ...
     mov eax, [kernel_entry_point]

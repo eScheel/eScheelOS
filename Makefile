@@ -46,7 +46,7 @@ kernel:
 	sudo mdconfig -d -u 0
 
 clean-boot:
-	rm -rv boot.bin stage2.bin 
+	rm -rv mbr.bin boot.bin stage2.bin 
 	
 clean-kernel:
 	rm -r *.o
