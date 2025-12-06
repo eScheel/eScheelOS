@@ -30,8 +30,8 @@ global EFLAGS_VALUE
 ;=============================================================================================
 
 KERNEL_INIT:
-    cli     ; stage2.asm should of done this for us.
-    cld     ; boot.asm should of done this for us.
+    cli
+    cld
 
     ; Setup our main kernel stack.
     mov ebp, stack_top
