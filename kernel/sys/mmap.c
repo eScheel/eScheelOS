@@ -5,7 +5,7 @@ uint8_t main_memory_index;
 memory_region_t available_memory_map[SMAP_entry_max];
 
 static size_t mmap_avail_entry_count;
-static uint64_t total_memory_size;
+uint64_t total_memory_size;
 
 //========================================================================================
 /*

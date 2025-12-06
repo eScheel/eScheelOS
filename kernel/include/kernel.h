@@ -30,6 +30,7 @@ typedef struct {
 
 extern uint8_t main_memory_index;
 extern memory_region_t available_memory_map[];
+extern uint64_t total_memory_size;
 
 extern void mmap_display_available();
 

@@ -13,7 +13,7 @@
 static uint32_t page_directory[1024] __attribute__((aligned(PAGE_SIZE)));
 
 // We are just going to identity map everything to keep things simple.
-#define PTI_COUNT 8
+#define PTI_COUNT 32
 static uint32_t page_table_ident[PTI_COUNT][1024] __attribute__((aligned(PAGE_SIZE)));
 
 // The global pointer to the physical address of the page directory.
