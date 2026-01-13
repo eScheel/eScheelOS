@@ -1,0 +1,16 @@
+eScheel OS Memory MAP:
+
+LOWER:
+    0x0000  - 0x0fff  : ...
+    0x1000  - 0x1fff  : mbr.bin/stage2.bin
+    0x2000  - 0x2fff  : stage2 stack
+    0x3000  - 0x7bff  : ...
+    0x7c00  - 0x7dff  : boot.bin
+    0x7e00  - 0x3ffff : ...
+    0x40000 - 0x7ffff : temp kernel load
+    0x80000 - 0xfffff : directory entries and FAT tables
+
+UPPER:
+    0x100000 - 0x1FFFFF : kernel .text .rodata .data .bss(stack)
+    0x200000 - 0x2FFFFF : Heap
+    0x300000 - 0x3FFFFF : Loaded Program / TASK
