@@ -19,3 +19,5 @@ Kind of FAT32 Capable. (Read Only)
 Round Robin based multi-tasking using the PIT!  
 
 Built on FreeBSD with the i386-gcc14 pkg. Tested on Virtualbox and an eMachine T5048.
+
+<img width="1797" height="1156" alt="escheelos" src="https://github.com/user-attachments/assets/49cb35b8-458b-4da4-86c2-004ec8253acc" />
